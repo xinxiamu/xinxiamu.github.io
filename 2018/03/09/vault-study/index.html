@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="技术博客"><title>Vault学习 | 小木</title><link rel="stylesheet" type="text/css" href="//fonts.proxy.ustclug.org/css?family=Source+Code+Pro"><link rel="stylesheet" type="text/css" href="/css/style.css?v=2.0.1"><link rel="stylesheet" type="text/css" href="/css/highlight.css?v=2.0.1"><link rel="Shortcut Icon" href="/favicon.ico"><link rel="bookmark" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Vault学习</h1><a id="logo" href="/.">小木</a><p class="description">专注、忍耐、坚定、从容!!! 乌龟快跑……</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div><div id="search-form"><div id="result-mask" class="hide"></div><label><input id="search-key" type="text" autocomplete="off" placeholder="Arama"></label><div id="result-wrap" class="hide"><div id="search-result"></div></div><div class="hide"><template id="search-tpl"><div class="item"><a href="/{path}" title="{title}"><div class="title">{title}</div><div class="time">{date}</div><div class="tags">{tags}</div></a></div></template></div></div></div><div id="layout" class="layout-g"><div class="layout-l"><div class="content_container"><div class="post"><h1 class="post-title">Vault学习</h1><div class="post-meta"><a href="/2018/03/09/vault-study/#comments" class="comment-count"></a><p><span class="date">Mar 09, 2018</span><span><a href="/categories/密码/" class="category">密码</a></span><span><i id="busuanzi_container_page_pv"><i id="busuanzi_value_page_pv"></i><i>点击</i></i></span></p></div><div class="post-content"><p>Valut是个密码管理工具，用来安全的管理例如数据库、应用程序api等等等的密码……</p>
+<p>特性：</p>
+<p>1.安全的私密信息存储 </p>
+<p>2.动态的私密信息支持</p>
+<p>3.提供对于私密信息的更新，延长有效时间的功能</p>
+<p>4.灵活的权限控制</p>
+<p>5.多种客户端登录验证方式</p>
+<p>参考：<br><a href="https://www.vaultproject.io/intro/index.html" target="_blank" rel="noopener">https://www.vaultproject.io/intro/index.html</a></p>
+<h2 id="安装Valut"><a href="#安装Valut" class="headerlink" title="安装Valut"></a>安装Valut</h2><p>1.下载地址：<a href="https://www.vaultproject.io/downloads.html" target="_blank" rel="noopener">https://www.vaultproject.io/downloads.html</a></p>
+<p>2.解压<br>解压后只有一个名为vualt的可执行文件。该文件可以安全的移动位置。</p>
+<p>配置环境变量，把vault可执行文件所在目录添加到环境变量：</p>
+<p><code>export PATH=$PATH:/home/mutian/dev/bin</code></p>
+<p>检验是否成功：</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault 
+Usage: vault &lt;command&gt; [args]
+
+Common commands:
+    read        Read data and retrieves secrets
+    write       Write data, configuration, and secrets
+    delete      Delete secrets and configuration
+    list        List data or secrets
+    login       Authenticate locally
+    server      Start a Vault server
+    status      Print seal and HA status
+    unwrap      Unwrap a wrapped secret
+
+Other commands:
+    audit          Interact with audit devices
+    auth           Interact with auth methods
+    lease          Interact with leases
+    operator       Perform operator-specific tasks
+    path-help      Retrieve API help for paths
+    policy         Interact with policies
+    secrets        Interact with secrets engines
+    ssh            Initiate an SSH session
+    token          Interact with tokens
+</code></pre><p>表示环境变量添加准确，已经安装成功。</p>
+<p>3.install completions</p>
+<pre><code>$ vault -autocomplete-install
+</code></pre><p>然后重新启动shell窗口，输入命令<code>vault</code>，然后按Tab键，将出现命令参数提示。如下：    </p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault 
+audit      lease      operator   read       ssh        unwrap     
+auth       list       path-help  secrets    status     write      
+delete     login      policy     server     token      
+mutian@mutian-ThinkPad-T440p:~$ vault 
+</code></pre><p>##　启动服务</p>
+<h4 id="启动开发环境"><a href="#启动开发环境" class="headerlink" title="启动开发环境"></a>启动开发环境</h4><p>开发环境只用来在本机做开发使用，数据保存在内存，所以千万不能在生产环境使用。</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault server -dev
+==&gt; Vault server configuration:
+
+                     Cgo: disabled
+         Cluster Address: https://127.0.0.1:8201
+              Listener 1: tcp (addr: &quot;127.0.0.1:8200&quot;, cluster address: &quot;127.0.0.1:8201&quot;, tls: &quot;disabled&quot;)
+               Log Level: info
+                   Mlock: supported: true, enabled: false
+        Redirect Address: http://127.0.0.1:8200
+                 Storage: inmem
+                 Version: Vault v0.9.5
+             Version Sha: 36edb4d42380d89a897e7f633046423240b710d9
+
+WARNING! dev mode is enabled! In this mode, Vault runs entirely in-memory
+and starts unsealed with a single unseal key. The root token is already
+authenticated to the CLI, so you can immediately begin using Vault.
+
+You may need to set the following environment variable:
+
+    $ export VAULT_ADDR=&apos;http://127.0.0.1:8200&apos;
+
+The unseal key and root token are displayed below in case you want to
+seal/unseal the Vault or re-authenticate.
+
+Unseal Key: CHZrUesD0FeIHV/5lzkeKehzYh+pNjd0GH5wzG0VjSE=
+Root Token: 182a4bb0-1165-a049-6e7a-e0dbef229a28
+
+Development mode should NOT be used in production installations!
+
+==&gt; Vault server started! Log data will stream in below:
+</code></pre><p>看到上面内容说明已经启动成功，在前台运行的。</p>
+<p>验证服务是否在成功运行：</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault status 
+Error checking seal status: Get https://127.0.0.1:8200/v1/sys/seal-status: http: server gave HTTP response to HTTPS client
+mutian@mutian-ThinkPad-T440p:~$ 
+</code></pre><p>看到以上提示：错误，所以启动没成功。因为没配置回环访问。执行如下命令：</p>
+<pre><code>export VAULT_ADDR=http://127.0.0.1:8200
+</code></pre><p>再次查看vault服务运行状态:</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault status
+Key             Value
+---             -----
+Seal Type       shamir
+Sealed          false
+Total Shares    1
+Threshold       1
+Version         0.9.5
+Cluster Name    vault-cluster-bcf3f2f8
+Cluster ID      c2649684-fe35-3820-983b-f324a51b115c
+HA Enabled      false
+</code></pre><p>看到了上面的内容，则证明服务启动成功。</p>
+<p>为了方便CLI使用vault命令，建议配置环境变量；安全起见，建议设置环境变量只在当前客户端生效，<br>命令：</p>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>命令</th>
+<th style="text-align:left">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>设置vault访问地址</td>
+<td>export VAULT_ADDR=<a href="http://127.0.0.1:8200" target="_blank" rel="noopener">http://127.0.0.1:8200</a></td>
+<td style="text-align:left">vault命令作用的vault服务的地址</td>
+</tr>
+<tr>
+<td>设置Vault PATH</td>
+<td>export PATH=$PATH:&lt; vault install path &gt;</td>
+<td style="text-align:left">vault install path：vault安装路径</td>
+</tr>
+<tr>
+<td>设置访问token</td>
+<td>export VAULT_TOKEN=&lt; token &gt;</td>
+<td style="text-align:left">token：登录vault时的token，首次登录可使用root token</td>
+</tr>
+<tr>
+<td>设置是否跳过核查</td>
+<td>export VAULT_SKIP_VERIFY=false</td>
+<td style="text-align:left">使用TSL访问时需要设置，未使用证书忽略此项</td>
+</tr>
+<tr>
+<td>设置访问证书</td>
+<td>export VAULT_CAPATH=/usr/local/vault/work/ca/certs/ca.cert.pem</td>
+<td style="text-align:left">使用TSL访问时需要设置，未使用证书忽略此项</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>保存私密信息</li>
+</ul>
+<p>下面是简单的写入信息命令：</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault write secret/hello value=world
+Success! Data written to: secret/hello
+</code></pre><p>这会把键值对信息写入到路劲<code>secret/hello</code>中。　键为value,值为world。</p>
+<p>也可以一次性写入多个键值保存：</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault write secret/hello value=world excited=yesSuccess! Data written to: secret/hello
+</code></pre><ul>
+<li>读取私密信息</li>
+</ul>
+<p>显示该路径下所有保存键值对：</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault read secret/hello 
+Key                 Value
+---                 -----
+refresh_interval    768h
+excited             yes
+value               world    
+</code></pre><p>获取单个的值：</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault read -field value secret/hello
+world
+</code></pre><ul>
+<li>删除路径下键值</li>
+</ul>
+<p>删除所有：</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault delete secret/hello 
+Success! Data deleted (if it existed) at: secret/hello
+mutian@mutian-ThinkPad-T440p:~$ vault read secret/hello
+No value found at secret/hello
+</code></pre><p>看上面命令，说明已经把保存到路径<code>secret/hello</code>下的键值信息全部删除。</p>
+<h2 id="秘密引擎"><a href="#秘密引擎" class="headerlink" title="秘密引擎"></a>秘密引擎</h2><p>上面内容中，我们知道怎么保存信息，读取信息，删除信息，但是注意到没，只能保存到路径<code>secret/hello</code>下面，这个是默认的。当你试图保存到其他路径下时候，将报错。</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault write ~/dev name=zmt
+Error writing data to home/mutian/dev: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/home/mutian/dev
+Code: 404. Errors:
+
+* no handler for route &apos;home/mutian/dev&apos;
+</code></pre><p>默认下，在路劲<code>secret/.</code>Vault开启一个ｋｖ引擎。这个ｋｖ引擎可写入，读取数据到后台存储。    </p>
+<ul>
+<li><p>开启一个新的kv私密引擎</p>
+<p>  mutian@mutian-ThinkPad-T440p:~$ vault secrets enable -path=abs kv<br>  Success! Enabled the kv secrets engine at: abs/<br>  mutian@mutian-ThinkPad-T440p:~$ vault secrets list<br>  Path          Type         Description</p>
+<hr>
+<p>  abs/          kv           n/a<br>  cubbyhole/    cubbyhole    per-token private secret storage<br>  identity/     identity     identity store<br>  secret/       kv           key/value secret storage<br>  sys/          system       system endpoints used for control, policy and debugging</p>
+</li>
+</ul>
+<p>通过命令<code>vault secrets list</code>可以看到，第一个就是就是我们刚才开启的新私密引擎。</p>
+<p>往该新建私密引擎保存私密信息：</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault write abs/my-secret name=zmt
+Success! Data written to: abs/my-secret
+mutian@mutian-ThinkPad-T440p:~$ vault write abs/hello target=world
+Success! Data written to: abs/hello
+mutian@mutian-ThinkPad-T440p:~$ vault write abs/airplane type=boeing class=787
+Success! Data written to: abs/airplane
+mutian@mutian-ThinkPad-T440p:~$ 
+</code></pre><p>查看该私密引擎下所有key</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault list abs
+Keys
+----
+airplane
+hello
+my-secret
+</code></pre><ul>
+<li>关闭私密引擎</li>
+</ul>
+<p>当一个私密引擎不再使用的话，我们就可以调用命令来停用它。　　<br>当停用一个私密引擎的时候，该私密引擎将撤销，对应的保存的私密信息将会被移除。</p>
+<pre><code>mutian@mutian-ThinkPad-T440p:~$ vault secrets disable abs/
+Success! Disabled the secrets engine (if it existed) at: abs/
+mutian@mutian-ThinkPad-T440p:~$ vault secrets list
+Path          Type         Description
+----          ----         -----------
+cubbyhole/    cubbyhole    per-token private secret storage
+identity/     identity     identity store
+secret/       kv           key/value secret storage
+sys/          system       system endpoints used for control, policy and debugging
+</code></pre><p>上面结果中，已经再看不到私密引擎<code>abs/</code></p>
+<ul>
+<li>什么是私密引擎（Secrets Engine）</li>
+</ul>
+<p>上面我们学会了如何启动停止一个私密引擎，那私密引擎到底是个什么东西呢？</p>
+<p>实际上，私密引擎就类似一个虚拟文件系统，所有的read/write/delete/list操作都在它下面进行，然后私密引擎自己决定如何来响应请求。　<br>这是一种抽象，这种抽象具有强大的作用，它提供统一的接口，直接面对物理系统、数据库等，除此之外，一些独特的环境如AWS IAM、动态sql等，都可以统一使用增删改查这些操作接口。　</p>
+<h2 id="动态私密信息保存"><a href="#动态私密信息保存" class="headerlink" title="动态私密信息保存"></a>动态私密信息保存</h2></div><div class="tags"><a href="/tags/vault/">vault</a></div><div class="post-share"><div class="bdsharebuttonbox"><span style="float:left;line-height: 28px;height: 28px;font-size:16px;font-weight:blod">分享到：</span><a href="#" data-cmd="more" class="bds_more"></a><a href="#" data-cmd="mshare" title="分享到一键分享" class="bds_mshare"></a><a href="#" data-cmd="fbook" title="分享到Facebook" class="bds_fbook"></a><a href="#" data-cmd="twi" title="分享到Twitter" class="bds_twi"></a><a href="#" data-cmd="linkedin" title="分享到linkedin" class="bds_linkedin"></a><a href="#" data-cmd="youdao" title="分享到有道云笔记" class="bds_youdao"></a><a href="#" data-cmd="evernotecn" title="分享到印象笔记" class="bds_evernotecn"></a><a href="#" data-cmd="weixin" title="分享到微信" class="bds_weixin"></a><a href="#" data-cmd="qzone" title="分享到QQ空间" class="bds_qzone"></a><a href="#" data-cmd="tsina" title="分享到新浪微博" class="bds_tsina"></a></div></div><div class="post-nav"><a href="/2018/03/13/k8s-start/" class="pre">k8s入门</a><a href="/2018/03/08/jwt-study/" class="next">jwt初识</a></div><div id="comments"></div></div></div></div><div class="layout-r"><div id="sidebar"><div class="search-pla"></div><div id="toc" class="widget"><div class="widget-title"><i class="fa fa-fei">文章目录</i></div><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#安装Valut"><span class="toc-text">安装Valut</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#启动开发环境"><span class="toc-text">启动开发环境</span></a></li></ol></li></ol><li class="toc-item toc-level-2"><a class="toc-link" href="#秘密引擎"><span class="toc-text">秘密引擎</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#动态私密信息保存"><span class="toc-text">动态私密信息保存</span></a></li></div><div class="widget"><div class="widget-title"><i class="fa fa-xie"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/ng2-pdfjs-viewer-start/">angular pdf 浏览插件ng2-pdfjs-viewer</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/github-issue/">github使用问题收集</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/mupdf/">MUPDF-一个pdf文件处理利器</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/10/19/kafka-start/">kafka入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/09/02/redmine-docker-install/">docker环境安装redmine</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/07/03/Hugo-Netlify-Forestry/">Hugo + Netlify +Forestry 发布hugo静态网站</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/29/hugo-start/">静态网站生成工具-Hugo</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/28/architecture-c4model/">可视化架构-c4介绍</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/18/minio-start/">分布式文件存储系统 MINIO入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/06/java-jni/">JAVA JNI入门</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-gui"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/CentOs/">CentOs</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kubernetes/">Kubernetes</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Nginx/">Nginx</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Pivotal-Web-Service/">Pivotal Web Service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/TypeScript/">TypeScript</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/angular/">angular</a><span class="category-list-count">8</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/api-manage/">api-manage</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/aws/">aws</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/docker/">docker</a><span class="category-list-count">18</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/flutter/">flutter</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/git/">git</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/github/">github</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/gitlab/">gitlab</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/http协议/">http协议</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/hugo/">hugo</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/idea/">idea</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java/">java</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-io/">java-io</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-jni/">java-jni</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-nio/">java-nio</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/javapoet/">javapoet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jpa-hibernate/">jpa/hibernate</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/json/">json</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jvm/">jvm</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jwt/">jwt</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/kafka/">kafka</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/linux/">linux</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/maven/">maven</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/micro-service/">micro-service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/mysql/">mysql</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/nginx/">nginx</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ngrok/">ngrok</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/npm/">npm</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/pdf/">pdf</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rabbitmq/">rabbitmq</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redmine/">redmine</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rocketmq/">rocketmq</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/security/">security</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/servlet/">servlet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shadowsocks/">shadowsocks</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shiro/">shiro</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-boot/">spring-boot</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-cloud/">spring-cloud</a><span class="category-list-count">11</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/teamcity/">teamcity</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ubuntu/">ubuntu</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/vagrant/">vagrant</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/zookeeper/">zookeeper</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式系统/">分布式系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/区块链/">区块链</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/密码/">密码</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/持续集成/">持续集成</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/文件存储系统/">文件存储系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/服务网格/">服务网格</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/架构/">架构</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/监控/">监控</a><span class="category-list-count">2</span></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-biao"> 标签</i></div><div class="tagcloud"><a href="/tags/nginx负载均衡/" style="font-size: 15px;">nginx负载均衡</a> <a href="/tags/apidoc/" style="font-size: 15px;">apidoc</a> <a href="/tags/aws云服务器/" style="font-size: 15px;">aws云服务器</a> <a href="/tags/centos-jdk8-install/" style="font-size: 15px;">centos-jdk8-install</a> <a href="/tags/centos登录/" style="font-size: 15px;">centos登录</a> <a href="/tags/mysql-mysql8/" style="font-size: 15px;">mysql mysql8</a> <a href="/tags/concourse/" style="font-size: 15px;">concourse</a> <a href="/tags/api-version-manage-spring-boot中API版本迭代管理/" style="font-size: 15px;">api-version-manage,spring-boot中API版本迭代管理</a> <a href="/tags/cron-grammar/" style="font-size: 15px;">cron-grammar</a> <a href="/tags/snowflake算法/" style="font-size: 15px;">snowflake算法</a> <a href="/tags/centos-docker-install/" style="font-size: 15px;">centos-docker-install</a> <a href="/tags/docker镜像创建、docker容器启动、docker发布web应用/" style="font-size: 15px;">docker镜像创建、docker容器启动、docker发布web应用</a> <a href="/tags/docker-ce安装/" style="font-size: 15px;">docker ce安装</a> <a href="/tags/docker-容器/" style="font-size: 15px;">docker 容器</a> <a href="/tags/docker数据管理/" style="font-size: 15px;">docker数据管理</a> <a href="/tags/基础概念/" style="font-size: 15px;">基础概念</a> <a href="/tags/docker镜像/" style="font-size: 15px;">docker镜像</a> <a href="/tags/docker网络/" style="font-size: 15px;">docker网络</a> <a href="/tags/git-tag/" style="font-size: 15px;">git-tag</a> <a href="/tags/git分支、github分支/" style="font-size: 15px;">git分支、github分支</a> <a href="/tags/git-server-build/" style="font-size: 15px;">git-server-build</a> <a href="/tags/git-install-in-centos/" style="font-size: 15px;">git-install-in-centos</a> <a href="/tags/hashicorp-vault/" style="font-size: 15px;">hashicorp-vault</a> <a href="/tags/http-overview/" style="font-size: 15px;">http-overview</a> <a href="/tags/hibernate-relation/" style="font-size: 15px;">hibernate-relation</a> <a href="/tags/git问题/" style="font-size: 15px;">git问题</a> <a href="/tags/istio/" style="font-size: 15px;">istio</a> <a href="/tags/jackson/" style="font-size: 15px;">jackson</a> <a href="/tags/cglib/" style="font-size: 15px;">cglib</a> <a href="/tags/jvm监控工具/" style="font-size: 15px;">jvm监控工具</a> <a href="/tags/gc垃圾回收/" style="font-size: 15px;">gc垃圾回收</a> <a href="/tags/javapoet-apt-annotation/" style="font-size: 15px;">javapoet-apt-annotation</a> <a href="/tags/k8s/" style="font-size: 15px;">k8s</a> <a href="/tags/jenkins-java-maven/" style="font-size: 15px;">jenkins-java-maven</a> <a href="/tags/linux-command/" style="font-size: 15px;">linux-command</a> <a href="/tags/ubuntu-navicat/" style="font-size: 15px;">ubuntu-navicat</a> <a href="/tags/maven常用功能/" style="font-size: 15px;">maven常用功能</a> <a href="/tags/微服务实践总结/" style="font-size: 15px;">微服务实践总结</a> <a href="/tags/maven-error/" style="font-size: 15px;">maven-error</a> <a href="/tags/mysql建表规范/" style="font-size: 15px;">mysql建表规范</a> <a href="/tags/mysql一主多从配置/" style="font-size: 15px;">mysql一主多从配置</a> <a href="/tags/mysql-expain/" style="font-size: 15px;">mysql-expain</a> <a href="/tags/nginx能做什么/" style="font-size: 15px;">nginx能做什么</a> <a href="/tags/ngrok使用/" style="font-size: 15px;">ngrok使用</a> <a href="/tags/npm使用问题/" style="font-size: 15px;">npm使用问题</a> <a href="/tags/mysql使用问题收藏/" style="font-size: 15px;">mysql使用问题收藏</a> <a href="/tags/pws-push/" style="font-size: 15px;">pws-push</a> <a href="/tags/redis-主从-集群/" style="font-size: 15px;">redis,主从,集群</a> <a href="/tags/redis-密码-安全/" style="font-size: 15px;">redis,密码,安全</a> <a href="/tags/redis命令/" style="font-size: 15px;">redis命令</a> <a href="/tags/redis分布式锁/" style="font-size: 15px;">redis分布式锁</a> <a href="/tags/rabbitmq-install/" style="font-size: 15px;">rabbitmq-install</a> <a href="/tags/redis发布订阅/" style="font-size: 15px;">redis发布订阅</a> <a href="/tags/redis哨兵模式/" style="font-size: 15px;">redis哨兵模式</a> <a href="/tags/redis-install/" style="font-size: 15px;">redis-install</a> <a href="/tags/redmine-mongrel-nginx/" style="font-size: 15px;">redmine-mongrel-nginx</a> <a href="/tags/redmine插件/" style="font-size: 15px;">redmine插件</a> <a href="/tags/rocketmq入门/" style="font-size: 15px;">rocketmq入门</a> <a href="/tags/restful-api/" style="font-size: 15px;">restful-api</a> <a href="/tags/change-contextpath-way/" style="font-size: 15px;">change-contextpath-way</a> <a href="/tags/spring-cloud-配置中心加解密/" style="font-size: 15px;">spring-cloud(配置中心加解密)</a> <a href="/tags/feign使用常见问题/" style="font-size: 15px;">feign使用常见问题</a> <a href="/tags/feign/" style="font-size: 15px;">feign</a> <a href="/tags/hystrix/" style="font-size: 15px;">hystrix</a> <a href="/tags/hystrix-dashboard/" style="font-size: 15px;">hystrix,dashboard</a> <a href="/tags/zuul-exception/" style="font-size: 15px;">zuul-exception</a> <a href="/tags/zuul-filters/" style="font-size: 15px;">zuul-filters</a> <a href="/tags/ELK/" style="font-size: 15px;">ELK</a> <a href="/tags/zuul-start/" style="font-size: 15px;">zuul-start</a> <a href="/tags/spinnaker-start/" style="font-size: 15px;">spinnaker-start</a> <a href="/tags/shadowsocks-go/" style="font-size: 15px;">shadowsocks-go</a> <a href="/tags/spring-cors/" style="font-size: 15px;">spring-cors</a> <a href="/tags/spring-cache/" style="font-size: 15px;">spring cache</a> <a href="/tags/shiro入门/" style="font-size: 15px;">shiro入门</a> <a href="/tags/spring-boot-async/" style="font-size: 15px;">spring-boot-async</a> <a href="/tags/spring-boot-jar/" style="font-size: 15px;">spring-boot-jar</a> <a href="/tags/spring-mvc国际化/" style="font-size: 15px;">spring mvc国际化</a> <a href="/tags/teamcity-start/" style="font-size: 15px;">teamcity-start</a> <a href="/tags/jpa读写分离配置/" style="font-size: 15px;">jpa读写分离配置</a> <a href="/tags/vagrant-start/" style="font-size: 15px;">vagrant-start</a> <a href="/tags/vault/" style="font-size: 15px;">vault</a> <a href="/tags/wkhtmltopdf/" style="font-size: 15px;">wkhtmltopdf</a> <a href="/tags/website-high-performance/" style="font-size: 15px;">website-high-performance</a> <a href="/tags/apache-curator/" style="font-size: 15px;">apache curator</a> <a href="/tags/spring-boot-filter/" style="font-size: 15px;">spring-boot-filter</a> <a href="/tags/后端架构师技术图谱/" style="font-size: 15px;">后端架构师技术图谱</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-archive"> 归档</i></div><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-you"> 友情链接</i></div><ul></ul><a href="http://blog.didispace.com/" title="程序员DD|翟永超的博客" target="_blank">程序员DD|翟永超的博客</a><ul></ul><a href="http://www.bysocket.com/" title="泥瓦匠的博客" target="_blank">泥瓦匠的博客</a><ul></ul><a href="http://itmuch.com/" title="周立|Spring Cloud的博客" target="_blank">周立|Spring Cloud的博客</a><ul></ul><a href="http://itmuch.com/" title="梁桂钊的博客" target="_blank">梁桂钊的博客</a><ul></ul><a href="https://www.cnkirito.moe/" title="徐靖峰|个人博客" target="_blank">徐靖峰|个人博客</a><ul></ul><a href="http://www.ityouknow.com/" title="纯洁的微笑的博客" target="_blank">纯洁的微笑的博客</a><ul></ul><a href="https://crossoverjie.top/" title="crossoverJie blog" target="_blank">crossoverJie blog</a><ul></ul><a href="https://my.oschina.net/u/1859679/blog" title="wier的博客" target="_blank">wier的博客</a><ul></ul><a href="http://www.ictgu.cn/" title="Any-Video" target="_blank">Any-Video</a><ul></ul><a href="https://www.processon.com/" title="在线作图" target="_blank">在线作图</a><ul></ul><a href="http://spring4all.com/" title="spring4all" target="_blank">spring4all</a><ul></ul><a href="https://www.oschina.net/" title="开源中国" target="_blank">开源中国</a><ul></ul><a href="https://www.w3school.com.cn/" title="w3school学习网" target="_blank">w3school学习网</a><ul></ul><a href="https://angular.cn/" title="angular中文教程" target="_blank">angular中文教程</a><ul></ul><a href="http://tutorials.jenkov.com" title="java教程" target="_blank">java教程</a><ul></ul><a href="http://javasampleapproach.com/" title="javasampleapproach-java教程" target="_blank">javasampleapproach-java教程</a><ul></ul><a href="https://www.programcreek.com/" title="programcreek-java教程" target="_blank">programcreek-java教程</a><ul></ul><a href="https://howtodoinjava.com/" title="howtodoinjava" target="_blank">howtodoinjava</a><ul></ul><a href="http://docs.oracle.com/javase/9/docs/api/" title="javadoc(8/9)" target="_blank">javadoc(8/9)</a><ul></ul><a href="https://docs.oracle.com/javase/tutorial/essential/io/" title="java-core/io" target="_blank">java-core/io</a><ul></ul><a href="https://github.com/eugenp/tutorials" title="eugenp/tutorials" target="_blank">eugenp/tutorials</a><ul></ul><a href="http://www.markdown.cn/" title="markdown参考" target="_blank">markdown参考</a><ul></ul><a href="https://www.baeldung.com/" title="spring教程baeldung" target="_blank">spring教程baeldung</a><ul></ul><a href="https://createchance.github.io/" title="java并发编程" target="_blank">java并发编程</a><ul></ul><a href="http://ifeve.com/" title="并发编程" target="_blank">并发编程</a><ul></ul><a href="http://tutorials.jenkov.com/java-io/index.html" title="Java IO Tutorial" target="_blank">Java IO Tutorial</a><ul></ul><a href="http://tutorials.jenkov.com/java-nio/index.html" title="Java NIO Tutorial" target="_blank">Java NIO Tutorial</a><ul></ul><a href="https://tonybai.com/articles/" title="tonybai-golang" target="_blank">tonybai-golang</a></div></div></div></div><a id="totop" href="#top"></a><div id="footer"><div class="footer-info"><p><a href="/baidusitemap.xml">Baidu Site Haritası</a> |  <a href="/atom.xml">订阅</a> |  <a href="/about/">关于</a></p><p>本站总访问量：<i id="busuanzi_container_site_pv"><i id="busuanzi_value_site_pv"></i></i>次</p><p><span> Copyright &copy;<a href="/." rel="nofollow">xinxiamu.</a></span><span> Theme by<a rel="nofollow" target="_blank" href="https://github.com/chaooo/hexo-theme-BlueLake"> BlueLake.</a></span><span> Count by<a href="http://busuanzi.ibruce.info/"> busuanzi.</a></span><span> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a></span></p></div></div></div><script src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="/js/search.json.js?v=2.0.1"></script><script type="text/javascript" src="/js/toctotop.js?v=2.0.1" async></script><script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":["mshare","weixin","tsina","qzone","linkedin","fbook","twi","print","renren","sqq","evernotecn","bdysc","tqq","tqf","bdxc","kaixin001","tieba","douban","bdhome","thx","ibaidu","meilishuo","mogujie","diandian","huaban","duitang","hx","fx","youdao","sdo","qingbiji","people","xinhua","mail","isohu","yaolan","wealink","ty","iguba","h163","copy"],"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{},"image":{"viewList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"]}};with(document)0[(getElementsByTagName('head')[0]||head).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+</script></body></html>

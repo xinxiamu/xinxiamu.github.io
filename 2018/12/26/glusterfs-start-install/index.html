@@ -1,0 +1,214 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="技术博客"><title>文件存储系统glusterfs入门 | 小木</title><link rel="stylesheet" type="text/css" href="//fonts.proxy.ustclug.org/css?family=Source+Code+Pro"><link rel="stylesheet" type="text/css" href="/css/style.css?v=2.0.1"><link rel="stylesheet" type="text/css" href="/css/highlight.css?v=2.0.1"><link rel="Shortcut Icon" href="/favicon.ico"><link rel="bookmark" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">文件存储系统glusterfs入门</h1><a id="logo" href="/.">小木</a><p class="description">专注、忍耐、坚定、从容!!! 乌龟快跑……</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div><div id="search-form"><div id="result-mask" class="hide"></div><label><input id="search-key" type="text" autocomplete="off" placeholder="Arama"></label><div id="result-wrap" class="hide"><div id="search-result"></div></div><div class="hide"><template id="search-tpl"><div class="item"><a href="/{path}" title="{title}"><div class="title">{title}</div><div class="time">{date}</div><div class="tags">{tags}</div></a></div></template></div></div></div><div id="layout" class="layout-g"><div class="layout-l"><div class="content_container"><div class="post"><h1 class="post-title">文件存储系统glusterfs入门</h1><div class="post-meta"><a href="/2018/12/26/glusterfs-start-install/#comments" class="comment-count"></a><p><span class="date">Dec 26, 2018</span><span><a href="/categories/文件存储系统/" class="category">文件存储系统</a></span><span><i id="busuanzi_container_page_pv"><i id="busuanzi_value_page_pv"></i><i>点击</i></i></span></p></div><div class="post-content"><p>参考地址：<a href="https://www.gluster.org" target="_blank" rel="noopener">https://www.gluster.org</a> </p>
+<p><a href="https://my.oschina.net/hncscwc/blog/210072" target="_blank" rel="noopener">https://my.oschina.net/hncscwc/blog/210072</a></p>
+<h2 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h2><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><p>用三个节点搭建一个glusterfs集群，一个节点作为客户端使用。新建四个虚拟机(centos7)：<br>并编辑<code>etc/hosts</code></p>
+<pre><code>glusterfs服务器节点：  
+192.168.200.10  server-node1   # 主节点
+192.168.200.11  server-node2   # 从节点
+192.168.200.12  server-node3   # 从节点 
+
+client节点：   
+172.29.41.163 phn centos7
+</code></pre><p>然后在每个机子互相ping，确保网络通畅：</p>
+<p>在server-node1服务器执行： </p>
+<pre><code># ping server-node2
+# ping server-node3 
+</code></pre><p>其它机子同理，都ping下，保证互相通讯。</p>
+<h3 id="开始安装GlusterFS"><a href="#开始安装GlusterFS" class="headerlink" title="开始安装GlusterFS"></a>开始安装GlusterFS</h3><p>####　安装服务</p>
+<p>1.在每个服务节点安装：</p>
+<pre><code>$ yum install -y centos-release-gluster
+$ yum install -y glusterfs glusterfs-server 
+$ yum install -y glusterfs-fuse glusterfs-rdma
+</code></pre><p>2.设置服务开机自启动：  </p>
+<pre><code>$ systemctl start glusterd.service &amp;&amp; systemctl enable glusterd.service
+</code></pre><h4 id="配置集群"><a href="#配置集群" class="headerlink" title="配置集群"></a>配置集群</h4><p>1.首先启动服务（每个节点都启动）</p>
+<pre><code>systemctl start glusterd.service 
+systemctl enable glusterd.service
+</code></pre><p>2.关闭每个节点服务器的防火墙 </p>
+<pre><code>systemctl stop firewalld.service 
+systemctl disable firewalld.service
+</code></pre><p>3.在主节点中把另外两个从节点添加到集群    </p>
+<pre><code>gluster peer probe server-node1 
+gluster peer probe server-node2
+</code></pre><p>4.从集群中删除节点（在主节点服务器执行）</p>
+<pre><code>$ gluster peer detach 192.168.200.12
+</code></pre><p>可以从任意GFS Server节点上删除集群中的其它节点，但不能删除执行命令时的当前节点。</p>
+<p>6.查看集群状态</p>
+<p>在任意服务节点执行：  </p>
+<pre><code>[root@server-node1 ~]# gluster peer status
+Number of Peers: 2
+
+Hostname: server-node2
+Uuid: 34bddd2b-4f4c-4b4b-afcd-786a6ba2c13d
+State: Peer in Cluster (Connected)
+
+Hostname: server-node3
+Uuid: 81101ab4-bcdc-467a-9fae-96d997a75fdc
+State: Peer in Cluster (Connected)
+
+---------------------------------------------
+
+[root@server-node2 ~]# gluster peer status
+Number of Peers: 2
+
+Hostname: server-node1
+Uuid: d34a54a8-24bc-43ff-95fc-fe0b6d5c52fa
+State: Peer in Cluster (Connected)
+Other names:
+192.168.200.10
+
+Hostname: server-node3
+Uuid: 81101ab4-bcdc-467a-9fae-96d997a75fdc
+State: Peer in Cluster (Connected)
+
+----------------------------------------------
+
+[root@server-node3 ~]# gluster peer status
+Number of Peers: 2
+
+Hostname: server-node1
+Uuid: d34a54a8-24bc-43ff-95fc-fe0b6d5c52fa
+State: Peer in Cluster (Connected)
+Other names:
+server-node1
+
+Hostname: server-node2
+Uuid: 34bddd2b-4f4c-4b4b-afcd-786a6ba2c13d
+State: Peer in Cluster (Connected)
+</code></pre><p>在每个节点，可以看到另外的另个节点。</p>
+<p>7.创建数据存储目录（每个节点服务都要创建）</p>
+<pre><code>mkdir -p /data/gluster/exp1
+</code></pre><p>8.创建卷，GFS Volume</p>
+<p>在任意服务节点上执行如下命令：   </p>
+<pre><code>gluster volume create models replica 3 server-node1:/data/gluster/exp1 server-node2:/data/gluster/exp1 server-node3:/data/gluster/exp1 force    
+
+------------------------------------------
+[root@server-node1 gluster]# gluster volume create models replica 3 server-node1:/data/gluster/exp1 server-node2:/data/gluster/exp1 server-node3:/data/gluster/exp1 force
+volume create: models: success: please start the volume to access data
+</code></pre><blockquote>
+<p>_说明_:<br>models: 卷的名称<br>replica 3: 表明存储3个备份，后面指定服务器的存储目录    </p>
+</blockquote>
+<ul>
+<li>查看volume 状态<br>在任意服务节点执行：  </li>
+</ul>
+<pre><code>gluster volume info     
+
+------------------------------------------------------------
+
+[root@server-node2 ~]# gluster volume info
+
+Volume Name: models
+Type: Replicate
+Volume ID: 45d12287-2dfa-42be-954b-97c014d189c4
+Status: Created
+Snapshot Count: 0
+Number of Bricks: 1 x 3 = 3
+Transport-type: tcp
+Bricks:
+Brick1: server-node1:/data/gluster/exp1
+Brick2: server-node2:/data/gluster/exp1
+Brick3: server-node3:/data/gluster/exp1
+Options Reconfigured:
+transport.address-family: inet
+nfs.disable: on
+performance.client-io-threads: off
+</code></pre><p>8.启动卷<br>启动名为models的数据卷，在任意一个服务节点上执行即可：   </p>
+<pre><code>gluster volume start models    
+</code></pre><p>重新查看卷信息，会看到卷的状态status变为Started。代表卷已经启动成功。   </p>
+<h2 id="配置-GFS-Client"><a href="#配置-GFS-Client" class="headerlink" title="配置 GFS Client"></a>配置 GFS Client</h2><p><a href="https://docs.gluster.org/en/latest/Administrator%20Guide/Setting%20Up%20Clients/" target="_blank" rel="noopener">https://docs.gluster.org/en/latest/Administrator%20Guide/Setting%20Up%20Clients/</a></p>
+<p>GFS客户端的节点必须和各个服务节点网络连通。ping命令检查。</p>
+<p>1.安装客户端</p>
+<pre><code>$ yum install -y glusterfs glusterfs-fuse glusterfs-rdma
+</code></pre><p>2.将客户端目录挂载到GFS服务的volume </p>
+<ul>
+<li><p>在gluster客户节点创建本地目录：   </p>
+<pre><code>$ mkdir -p /data/gluster/dt1
+</code></pre></li>
+<li><p>将本地目录挂载到GFS Volume：</p>
+<pre><code>mount -t glusterfs 192.168.200.10:models /data/gluster/dt1
+</code></pre></li>
+</ul>
+<blockquote>
+<p>参数说明：<br>192.168.200.10： 指的是GFS服务主节点的ip，一定是主节点。<br>models： 指上面创建的GFS每个服务上的卷（volume）名称。<br>/data/gluster/dt1: 客户端的本地目录，要挂载的目录。        </p>
+</blockquote>
+<p>_注意_:<br>上面挂载客户端目录到服务卷的命令可能不成功，这是因为用的是ip的原因，得把主节点的ip改成域名才行。因此，现在客户节点配置hosts。<br>编辑<code>/etc/hosts</code>： </p>
+<pre><code>192.168.200.10  server-node1  #GFS Server主节点
+</code></pre><p>然后重新挂载：</p>
+<pre><code>mount -t glusterfs server-node1:models /data/gluster/dt1      
+</code></pre><p>挂载成功。</p>
+<p>3.查看挂载</p>
+<pre><code>[root@gluster-client1 dt1]# df -h
+Filesystem                       Size  Used Avail Use% Mounted on
+/dev/mapper/VolGroup00-LogVol00   38G  3.3G   35G   9% /
+devtmpfs                         910M     0  910M   0% /dev
+tmpfs                            920M     0  920M   0% /dev/shm
+tmpfs                            920M  8.6M  911M   1% /run
+tmpfs                            920M     0  920M   0% /sys/fs/cgroup
+/dev/sda2                       1014M   63M  952M   7% /boot
+tmpfs                            184M     0  184M   0% /run/user/1000
+tmpfs                            184M     0  184M   0% /run/user/0
+server-node1:models               40G  3.4G   35G   9% /data/gluster/dt1
+</code></pre><p>可以看到，最后一个文件系统，就是我们挂载的。</p>
+<p>4.测试上传文件<br>在客户机执行上传文件命令：   </p>
+<pre><code>[root@gluster-client1 dt1]# time dd if=/dev/zero of=/data/gluster/dt1/hello bs=100M count=1
+1+0 records in
+1+0 records out
+104857600 bytes (105 MB) copied, 5.37804 s, 19.5 MB/s
+
+real    0m5.395s
+user    0m0.001s
+sys    0m0.182s
+[root@gluster-client1 dt1]# ls
+[root@gluster-client1 dt1]#    
+</code></pre><p>查看GFS Server各个节点对应的卷，以及客户节点的本地目录：</p>
+<pre><code>[root@server-node1 exp1]# pwd
+/data/gluster/exp1
+[root@server-node1 exp1]# ls
+hello
+</code></pre><p>都能看到一个hello的文件。说明的确按我们预期，有三份的文件数据，分别在三个服务节点上存储了。同时在客户端节点也有一份。    </p>
+<p>5.继续测试<br>随便在客户节点本地目录下，创建文件<code>touch a</code>，然后查看各个服务节点，会发现，客户节点的a文件已经同步到三个服务的对应卷下了，编辑客户节点的a文件，各个服务节点对应的a文件也会相应改变。这说明了它们是一直同步的。      </p>
+<h2 id="GFS性能调优"><a href="#GFS性能调优" class="headerlink" title="GFS性能调优"></a>GFS性能调优</h2><ul>
+<li>开启指定volume的配额： (models为volume名称)</li>
+</ul>
+<pre><code>gluster volume quota models enable
+</code></pre><ul>
+<li>限制models中 / (既总目录)最大使用80GB空间  </li>
+</ul>
+<pre><code>gluster volume quota models limit-usage / 80GB   
+</code></pre><ul>
+<li>设置 cache 大小(此处要根据实际情况，如果设置太大可能导致后面客户端挂载失败) </li>
+</ul>
+<pre><code>gluster volume set models performance.cache-size 512MB
+</code></pre><ul>
+<li>开启异步，后台操作  </li>
+</ul>
+<pre><code>gluster volume set models performance.flush-behind on
+</code></pre><ul>
+<li>设置 io 线程 32 </li>
+</ul>
+<pre><code>gluster volume set models performance.io-thread-count 32
+</code></pre><ul>
+<li>设置 回写 (写数据时间，先写入缓存内，再写入硬盘)</li>
+</ul>
+<pre><code>gluster volume set models performance.write-behind on
+</code></pre><ul>
+<li>调优之后的volume信息</li>
+</ul>
+<pre><code>gluster volume info
+</code></pre><p>然后试下再上传文件，看是否快很多呢。                      </p>
+<h2 id="其它命令"><a href="#其它命令" class="headerlink" title="其它命令"></a>其它命令</h2><h3 id="查看所volume（卷）"><a href="#查看所volume（卷）" class="headerlink" title="查看所volume（卷）"></a>查看所volume（卷）</h3><pre><code>gluster volume list
+</code></pre><h3 id="删除volume（卷）"><a href="#删除volume（卷）" class="headerlink" title="删除volume（卷）"></a>删除volume（卷）</h3><pre><code>gluster volume stop models //停止名字为 models 的磁盘 
+gluster volume delete models //删除名字为 models 的磁盘   
+</code></pre><h3 id="卸载GlusterFS磁盘"><a href="#卸载GlusterFS磁盘" class="headerlink" title="卸载GlusterFS磁盘"></a>卸载GlusterFS磁盘</h3><pre><code>--&gt;gluster peer detach glusterfs4
+</code></pre><h3 id="ACL访问控制"><a href="#ACL访问控制" class="headerlink" title="ACL访问控制"></a>ACL访问控制</h3><pre><code>--&gt;gluster volume set models auth.allow 192.168.56.*,10.0.1.*
+
+volume set: success
+</code></pre><h3 id="添加GlusterFS节点"><a href="#添加GlusterFS节点" class="headerlink" title="添加GlusterFS节点"></a>添加GlusterFS节点</h3><pre><code>--&gt;gluster peer probe sc2-log5
+--&gt;gluster peer probe sc2-log6
+--&gt;gluster volume add-brick models sc2-log5:/data/gluster sc2-log6:/data/gluster
+</code></pre><h3 id="迁移GlusterFS数据"><a href="#迁移GlusterFS数据" class="headerlink" title="迁移GlusterFS数据"></a>迁移GlusterFS数据</h3><pre><code>--&gt;gluster volume remove-brick models sc2-log1:/usr/local/share/models sc2-log5:/usr/local/share/models start
+--&gt;gluster volume remove-brick models sc2-log1:/usr/local/share/models sc2-log5:/usr/local/share/models status
+--&gt;gluster volume remove-brick models sc2-log1:/usr/local/share/models sc2-log5:/usr/local/share/models commit
+</code></pre><h3 id="修复GlusterFS数据-在节点1宕机的情况下"><a href="#修复GlusterFS数据-在节点1宕机的情况下" class="headerlink" title="修复GlusterFS数据(在节点1宕机的情况下)"></a>修复GlusterFS数据(在节点1宕机的情况下)</h3><pre><code>--&gt;gluster volume replace-brick models sc2-log1:/usr/local/share/models sc2-log5:/usr/local/share/models commit -force
+--&gt;gluster volume heal models full                      
+</code></pre></div><div class="tags"></div><div class="post-share"><div class="bdsharebuttonbox"><span style="float:left;line-height: 28px;height: 28px;font-size:16px;font-weight:blod">分享到：</span><a href="#" data-cmd="more" class="bds_more"></a><a href="#" data-cmd="mshare" title="分享到一键分享" class="bds_mshare"></a><a href="#" data-cmd="fbook" title="分享到Facebook" class="bds_fbook"></a><a href="#" data-cmd="twi" title="分享到Twitter" class="bds_twi"></a><a href="#" data-cmd="linkedin" title="分享到linkedin" class="bds_linkedin"></a><a href="#" data-cmd="youdao" title="分享到有道云笔记" class="bds_youdao"></a><a href="#" data-cmd="evernotecn" title="分享到印象笔记" class="bds_evernotecn"></a><a href="#" data-cmd="weixin" title="分享到微信" class="bds_weixin"></a><a href="#" data-cmd="qzone" title="分享到QQ空间" class="bds_qzone"></a><a href="#" data-cmd="tsina" title="分享到新浪微博" class="bds_tsina"></a></div></div><div class="post-nav"><a href="/2018/12/26/docker-container-add-port/" class="pre">docker给运行中的容器添加映射端口</a><a href="/2018/12/26/blockchain-paxos/" class="next">区块链-Paxos共识算法介绍</a></div><div id="comments"></div></div></div></div><div class="layout-r"><div id="sidebar"><div class="search-pla"></div><div id="toc" class="widget"><div class="widget-title"><i class="fa fa-fei">文章目录</i></div><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#原理"><span class="toc-text">原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#准备工作"><span class="toc-text">准备工作</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#开始安装GlusterFS"><span class="toc-text">开始安装GlusterFS</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#配置集群"><span class="toc-text">配置集群</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#配置-GFS-Client"><span class="toc-text">配置 GFS Client</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GFS性能调优"><span class="toc-text">GFS性能调优</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#其它命令"><span class="toc-text">其它命令</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#查看所volume（卷）"><span class="toc-text">查看所volume（卷）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#删除volume（卷）"><span class="toc-text">删除volume（卷）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#卸载GlusterFS磁盘"><span class="toc-text">卸载GlusterFS磁盘</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ACL访问控制"><span class="toc-text">ACL访问控制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#添加GlusterFS节点"><span class="toc-text">添加GlusterFS节点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#迁移GlusterFS数据"><span class="toc-text">迁移GlusterFS数据</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#修复GlusterFS数据-在节点1宕机的情况下"><span class="toc-text">修复GlusterFS数据(在节点1宕机的情况下)</span></a></li></ol></li></ol></div><div class="widget"><div class="widget-title"><i class="fa fa-xie"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/ng2-pdfjs-viewer-start/">angular pdf 浏览插件ng2-pdfjs-viewer</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/github-issue/">github使用问题收集</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/mupdf/">MUPDF-一个pdf文件处理利器</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/10/19/kafka-start/">kafka入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/09/02/redmine-docker-install/">docker环境安装redmine</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/07/03/Hugo-Netlify-Forestry/">Hugo + Netlify +Forestry 发布hugo静态网站</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/29/hugo-start/">静态网站生成工具-Hugo</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/28/architecture-c4model/">可视化架构-c4介绍</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/18/minio-start/">分布式文件存储系统 MINIO入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/06/java-jni/">JAVA JNI入门</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-gui"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/CentOs/">CentOs</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kubernetes/">Kubernetes</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Nginx/">Nginx</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Pivotal-Web-Service/">Pivotal Web Service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/TypeScript/">TypeScript</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/angular/">angular</a><span class="category-list-count">8</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/api-manage/">api-manage</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/aws/">aws</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/docker/">docker</a><span class="category-list-count">18</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/flutter/">flutter</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/git/">git</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/github/">github</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/gitlab/">gitlab</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/http协议/">http协议</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/hugo/">hugo</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/idea/">idea</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java/">java</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-io/">java-io</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-jni/">java-jni</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-nio/">java-nio</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/javapoet/">javapoet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jpa-hibernate/">jpa/hibernate</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/json/">json</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jvm/">jvm</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jwt/">jwt</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/kafka/">kafka</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/linux/">linux</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/maven/">maven</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/micro-service/">micro-service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/mysql/">mysql</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/nginx/">nginx</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ngrok/">ngrok</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/npm/">npm</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/pdf/">pdf</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rabbitmq/">rabbitmq</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redmine/">redmine</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rocketmq/">rocketmq</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/security/">security</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/servlet/">servlet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shadowsocks/">shadowsocks</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shiro/">shiro</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-boot/">spring-boot</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-cloud/">spring-cloud</a><span class="category-list-count">11</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/teamcity/">teamcity</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ubuntu/">ubuntu</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/vagrant/">vagrant</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/zookeeper/">zookeeper</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式系统/">分布式系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/区块链/">区块链</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/密码/">密码</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/持续集成/">持续集成</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/文件存储系统/">文件存储系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/服务网格/">服务网格</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/架构/">架构</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/监控/">监控</a><span class="category-list-count">2</span></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-biao"> 标签</i></div><div class="tagcloud"><a href="/tags/nginx负载均衡/" style="font-size: 15px;">nginx负载均衡</a> <a href="/tags/apidoc/" style="font-size: 15px;">apidoc</a> <a href="/tags/aws云服务器/" style="font-size: 15px;">aws云服务器</a> <a href="/tags/centos-jdk8-install/" style="font-size: 15px;">centos-jdk8-install</a> <a href="/tags/centos登录/" style="font-size: 15px;">centos登录</a> <a href="/tags/mysql-mysql8/" style="font-size: 15px;">mysql mysql8</a> <a href="/tags/concourse/" style="font-size: 15px;">concourse</a> <a href="/tags/api-version-manage-spring-boot中API版本迭代管理/" style="font-size: 15px;">api-version-manage,spring-boot中API版本迭代管理</a> <a href="/tags/cron-grammar/" style="font-size: 15px;">cron-grammar</a> <a href="/tags/snowflake算法/" style="font-size: 15px;">snowflake算法</a> <a href="/tags/centos-docker-install/" style="font-size: 15px;">centos-docker-install</a> <a href="/tags/docker镜像创建、docker容器启动、docker发布web应用/" style="font-size: 15px;">docker镜像创建、docker容器启动、docker发布web应用</a> <a href="/tags/docker-ce安装/" style="font-size: 15px;">docker ce安装</a> <a href="/tags/docker-容器/" style="font-size: 15px;">docker 容器</a> <a href="/tags/docker数据管理/" style="font-size: 15px;">docker数据管理</a> <a href="/tags/基础概念/" style="font-size: 15px;">基础概念</a> <a href="/tags/docker镜像/" style="font-size: 15px;">docker镜像</a> <a href="/tags/docker网络/" style="font-size: 15px;">docker网络</a> <a href="/tags/git-tag/" style="font-size: 15px;">git-tag</a> <a href="/tags/git分支、github分支/" style="font-size: 15px;">git分支、github分支</a> <a href="/tags/git-server-build/" style="font-size: 15px;">git-server-build</a> <a href="/tags/git-install-in-centos/" style="font-size: 15px;">git-install-in-centos</a> <a href="/tags/hashicorp-vault/" style="font-size: 15px;">hashicorp-vault</a> <a href="/tags/http-overview/" style="font-size: 15px;">http-overview</a> <a href="/tags/hibernate-relation/" style="font-size: 15px;">hibernate-relation</a> <a href="/tags/git问题/" style="font-size: 15px;">git问题</a> <a href="/tags/istio/" style="font-size: 15px;">istio</a> <a href="/tags/jackson/" style="font-size: 15px;">jackson</a> <a href="/tags/cglib/" style="font-size: 15px;">cglib</a> <a href="/tags/jvm监控工具/" style="font-size: 15px;">jvm监控工具</a> <a href="/tags/gc垃圾回收/" style="font-size: 15px;">gc垃圾回收</a> <a href="/tags/javapoet-apt-annotation/" style="font-size: 15px;">javapoet-apt-annotation</a> <a href="/tags/k8s/" style="font-size: 15px;">k8s</a> <a href="/tags/jenkins-java-maven/" style="font-size: 15px;">jenkins-java-maven</a> <a href="/tags/linux-command/" style="font-size: 15px;">linux-command</a> <a href="/tags/ubuntu-navicat/" style="font-size: 15px;">ubuntu-navicat</a> <a href="/tags/maven常用功能/" style="font-size: 15px;">maven常用功能</a> <a href="/tags/微服务实践总结/" style="font-size: 15px;">微服务实践总结</a> <a href="/tags/maven-error/" style="font-size: 15px;">maven-error</a> <a href="/tags/mysql建表规范/" style="font-size: 15px;">mysql建表规范</a> <a href="/tags/mysql一主多从配置/" style="font-size: 15px;">mysql一主多从配置</a> <a href="/tags/mysql-expain/" style="font-size: 15px;">mysql-expain</a> <a href="/tags/nginx能做什么/" style="font-size: 15px;">nginx能做什么</a> <a href="/tags/ngrok使用/" style="font-size: 15px;">ngrok使用</a> <a href="/tags/npm使用问题/" style="font-size: 15px;">npm使用问题</a> <a href="/tags/mysql使用问题收藏/" style="font-size: 15px;">mysql使用问题收藏</a> <a href="/tags/pws-push/" style="font-size: 15px;">pws-push</a> <a href="/tags/redis-主从-集群/" style="font-size: 15px;">redis,主从,集群</a> <a href="/tags/redis-密码-安全/" style="font-size: 15px;">redis,密码,安全</a> <a href="/tags/redis命令/" style="font-size: 15px;">redis命令</a> <a href="/tags/redis分布式锁/" style="font-size: 15px;">redis分布式锁</a> <a href="/tags/rabbitmq-install/" style="font-size: 15px;">rabbitmq-install</a> <a href="/tags/redis发布订阅/" style="font-size: 15px;">redis发布订阅</a> <a href="/tags/redis哨兵模式/" style="font-size: 15px;">redis哨兵模式</a> <a href="/tags/redis-install/" style="font-size: 15px;">redis-install</a> <a href="/tags/redmine-mongrel-nginx/" style="font-size: 15px;">redmine-mongrel-nginx</a> <a href="/tags/redmine插件/" style="font-size: 15px;">redmine插件</a> <a href="/tags/rocketmq入门/" style="font-size: 15px;">rocketmq入门</a> <a href="/tags/restful-api/" style="font-size: 15px;">restful-api</a> <a href="/tags/change-contextpath-way/" style="font-size: 15px;">change-contextpath-way</a> <a href="/tags/spring-cloud-配置中心加解密/" style="font-size: 15px;">spring-cloud(配置中心加解密)</a> <a href="/tags/feign使用常见问题/" style="font-size: 15px;">feign使用常见问题</a> <a href="/tags/feign/" style="font-size: 15px;">feign</a> <a href="/tags/hystrix/" style="font-size: 15px;">hystrix</a> <a href="/tags/hystrix-dashboard/" style="font-size: 15px;">hystrix,dashboard</a> <a href="/tags/zuul-exception/" style="font-size: 15px;">zuul-exception</a> <a href="/tags/zuul-filters/" style="font-size: 15px;">zuul-filters</a> <a href="/tags/ELK/" style="font-size: 15px;">ELK</a> <a href="/tags/zuul-start/" style="font-size: 15px;">zuul-start</a> <a href="/tags/spinnaker-start/" style="font-size: 15px;">spinnaker-start</a> <a href="/tags/shadowsocks-go/" style="font-size: 15px;">shadowsocks-go</a> <a href="/tags/spring-cors/" style="font-size: 15px;">spring-cors</a> <a href="/tags/spring-cache/" style="font-size: 15px;">spring cache</a> <a href="/tags/shiro入门/" style="font-size: 15px;">shiro入门</a> <a href="/tags/spring-boot-async/" style="font-size: 15px;">spring-boot-async</a> <a href="/tags/spring-boot-jar/" style="font-size: 15px;">spring-boot-jar</a> <a href="/tags/spring-mvc国际化/" style="font-size: 15px;">spring mvc国际化</a> <a href="/tags/teamcity-start/" style="font-size: 15px;">teamcity-start</a> <a href="/tags/jpa读写分离配置/" style="font-size: 15px;">jpa读写分离配置</a> <a href="/tags/vagrant-start/" style="font-size: 15px;">vagrant-start</a> <a href="/tags/vault/" style="font-size: 15px;">vault</a> <a href="/tags/wkhtmltopdf/" style="font-size: 15px;">wkhtmltopdf</a> <a href="/tags/website-high-performance/" style="font-size: 15px;">website-high-performance</a> <a href="/tags/apache-curator/" style="font-size: 15px;">apache curator</a> <a href="/tags/spring-boot-filter/" style="font-size: 15px;">spring-boot-filter</a> <a href="/tags/后端架构师技术图谱/" style="font-size: 15px;">后端架构师技术图谱</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-archive"> 归档</i></div><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-you"> 友情链接</i></div><ul></ul><a href="http://blog.didispace.com/" title="程序员DD|翟永超的博客" target="_blank">程序员DD|翟永超的博客</a><ul></ul><a href="http://www.bysocket.com/" title="泥瓦匠的博客" target="_blank">泥瓦匠的博客</a><ul></ul><a href="http://itmuch.com/" title="周立|Spring Cloud的博客" target="_blank">周立|Spring Cloud的博客</a><ul></ul><a href="http://itmuch.com/" title="梁桂钊的博客" target="_blank">梁桂钊的博客</a><ul></ul><a href="https://www.cnkirito.moe/" title="徐靖峰|个人博客" target="_blank">徐靖峰|个人博客</a><ul></ul><a href="http://www.ityouknow.com/" title="纯洁的微笑的博客" target="_blank">纯洁的微笑的博客</a><ul></ul><a href="https://crossoverjie.top/" title="crossoverJie blog" target="_blank">crossoverJie blog</a><ul></ul><a href="https://my.oschina.net/u/1859679/blog" title="wier的博客" target="_blank">wier的博客</a><ul></ul><a href="http://www.ictgu.cn/" title="Any-Video" target="_blank">Any-Video</a><ul></ul><a href="https://www.processon.com/" title="在线作图" target="_blank">在线作图</a><ul></ul><a href="http://spring4all.com/" title="spring4all" target="_blank">spring4all</a><ul></ul><a href="https://www.oschina.net/" title="开源中国" target="_blank">开源中国</a><ul></ul><a href="https://www.w3school.com.cn/" title="w3school学习网" target="_blank">w3school学习网</a><ul></ul><a href="https://angular.cn/" title="angular中文教程" target="_blank">angular中文教程</a><ul></ul><a href="http://tutorials.jenkov.com" title="java教程" target="_blank">java教程</a><ul></ul><a href="http://javasampleapproach.com/" title="javasampleapproach-java教程" target="_blank">javasampleapproach-java教程</a><ul></ul><a href="https://www.programcreek.com/" title="programcreek-java教程" target="_blank">programcreek-java教程</a><ul></ul><a href="https://howtodoinjava.com/" title="howtodoinjava" target="_blank">howtodoinjava</a><ul></ul><a href="http://docs.oracle.com/javase/9/docs/api/" title="javadoc(8/9)" target="_blank">javadoc(8/9)</a><ul></ul><a href="https://docs.oracle.com/javase/tutorial/essential/io/" title="java-core/io" target="_blank">java-core/io</a><ul></ul><a href="https://github.com/eugenp/tutorials" title="eugenp/tutorials" target="_blank">eugenp/tutorials</a><ul></ul><a href="http://www.markdown.cn/" title="markdown参考" target="_blank">markdown参考</a><ul></ul><a href="https://www.baeldung.com/" title="spring教程baeldung" target="_blank">spring教程baeldung</a><ul></ul><a href="https://createchance.github.io/" title="java并发编程" target="_blank">java并发编程</a><ul></ul><a href="http://ifeve.com/" title="并发编程" target="_blank">并发编程</a><ul></ul><a href="http://tutorials.jenkov.com/java-io/index.html" title="Java IO Tutorial" target="_blank">Java IO Tutorial</a><ul></ul><a href="http://tutorials.jenkov.com/java-nio/index.html" title="Java NIO Tutorial" target="_blank">Java NIO Tutorial</a><ul></ul><a href="https://tonybai.com/articles/" title="tonybai-golang" target="_blank">tonybai-golang</a></div></div></div></div><a id="totop" href="#top"></a><div id="footer"><div class="footer-info"><p><a href="/baidusitemap.xml">Baidu Site Haritası</a> |  <a href="/atom.xml">订阅</a> |  <a href="/about/">关于</a></p><p>本站总访问量：<i id="busuanzi_container_site_pv"><i id="busuanzi_value_site_pv"></i></i>次</p><p><span> Copyright &copy;<a href="/." rel="nofollow">xinxiamu.</a></span><span> Theme by<a rel="nofollow" target="_blank" href="https://github.com/chaooo/hexo-theme-BlueLake"> BlueLake.</a></span><span> Count by<a href="http://busuanzi.ibruce.info/"> busuanzi.</a></span><span> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a></span></p></div></div></div><script src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="/js/search.json.js?v=2.0.1"></script><script type="text/javascript" src="/js/toctotop.js?v=2.0.1" async></script><script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":["mshare","weixin","tsina","qzone","linkedin","fbook","twi","print","renren","sqq","evernotecn","bdysc","tqq","tqf","bdxc","kaixin001","tieba","douban","bdhome","thx","ibaidu","meilishuo","mogujie","diandian","huaban","duitang","hx","fx","youdao","sdo","qingbiji","people","xinhua","mail","isohu","yaolan","wealink","ty","iguba","h163","copy"],"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{},"image":{"viewList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"]}};with(document)0[(getElementsByTagName('head')[0]||head).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+</script></body></html>

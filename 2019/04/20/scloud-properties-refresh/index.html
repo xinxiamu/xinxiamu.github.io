@@ -1,0 +1,479 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="技术博客"><title>Spring Cloud外部环境配置刷新 | 小木</title><link rel="stylesheet" type="text/css" href="//fonts.proxy.ustclug.org/css?family=Source+Code+Pro"><link rel="stylesheet" type="text/css" href="/css/style.css?v=2.0.1"><link rel="stylesheet" type="text/css" href="/css/highlight.css?v=2.0.1"><link rel="Shortcut Icon" href="/favicon.ico"><link rel="bookmark" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Spring Cloud外部环境配置刷新</h1><a id="logo" href="/.">小木</a><p class="description">专注、忍耐、坚定、从容!!! 乌龟快跑……</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div><div id="search-form"><div id="result-mask" class="hide"></div><label><input id="search-key" type="text" autocomplete="off" placeholder="Arama"></label><div id="result-wrap" class="hide"><div id="search-result"></div></div><div class="hide"><template id="search-tpl"><div class="item"><a href="/{path}" title="{title}"><div class="title">{title}</div><div class="time">{date}</div><div class="tags">{tags}</div></a></div></template></div></div></div><div id="layout" class="layout-g"><div class="layout-l"><div class="content_container"><div class="post"><h1 class="post-title">Spring Cloud外部环境配置刷新</h1><div class="post-meta"><a href="/2019/04/20/scloud-properties-refresh/#comments" class="comment-count"></a><p><span class="date">Apr 20, 2019</span><span><a href="/categories/spring-cloud/" class="category">spring-cloud</a></span><span><i id="busuanzi_container_page_pv"><i id="busuanzi_value_page_pv"></i><i>点击</i></i></span></p></div><div class="post-content"><p>本文介绍在spring cloud架构中，如何做配置外部化以及更改配置属性并实时刷新的问题。<br>实验环境：<br>spring boot：2.1.4.RELEASE<br>spring cloud: Greenwich.SR1<br>github<br>rabbitmq: 3.7.8</p>
+<h2 id="服务注册发现中心eureka-server"><a href="#服务注册发现中心eureka-server" class="headerlink" title="服务注册发现中心eureka-server"></a>服务注册发现中心eureka-server</h2><p>关键依赖：</p>
+<pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-starter-netflix-eureka-server&lt;/artifactId&gt;
+&lt;/dependency&gt;
+</code></pre><p>application.yml：</p>
+<pre><code>server:
+  port: 1112
+spring:
+  application:
+    name: eureka-server
+  profiles:
+    active: dev
+logging:
+  level:
+    com:
+      netflix:
+        eureka: off
+        discovery: off
+  file: logs/${spring.application.name}.log
+</code></pre><p>application-dev.yml：</p>
+<pre><code>eureka:
+  instance:
+    instance-id: ${spring.application.name}:${spring.cloud.client.ip_address}:${server.port}
+    hostname: localhost
+  client:
+    fetch-registry: false
+    register-with-eureka: false  #不注册自己
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+      enable-self-preservation: false #设为false，关闭自我保护
+      eviction-interval-timer-in-ms: 4000  # 清理间隔（单位毫秒，默认是60*1000）
+</code></pre><p>该服务没什么需要注意的，按正常的来就可以。</p>
+<h2 id="配置中心config-server"><a href="#配置中心config-server" class="headerlink" title="配置中心config-server"></a>配置中心config-server</h2><h3 id="关键依赖："><a href="#关键依赖：" class="headerlink" title="关键依赖："></a>关键依赖：</h3><pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-security&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-config-server&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;!--实时刷新配置 start --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-config-monitor&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-starter-bus-amqp&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;!--实时刷新配置 end --&gt;
+
+&lt;!--作为服务注册到服务注册中心 --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-starter-netflix-eureka-client&lt;/artifactId&gt;
+&lt;/dependency&gt;
+</code></pre><p>要配置刷新，只需要添加：</p>
+<pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-config-monitor&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-starter-bus-amqp&lt;/artifactId&gt;
+&lt;/dependency&gt;
+</code></pre><h3 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h3><p>bootstrap.yml：</p>
+<pre><code>server:
+  port: 3331
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: dev
+## 非对称加解密,该段配置只能放在bootstrap.yml中
+encrypt:
+  key-store:
+    location: classpath:/config-server.jks
+    password: 111111  # storepass
+    alias: config-server    # alias
+    secret: 222222   # keypass
+</code></pre><p>application.yml：</p>
+<pre><code>management:
+  endpoints:
+    web:
+      exposure:
+        include: &quot;*&quot;
+</code></pre><p><code>management.endpoints.web.exposure.include</code>这个配置一定要加上，关键。默认是指暴露站点：info，health。改成星号，代表暴露全部。</p>
+<p>application-dev.yml：</p>
+<pre><code>#作为服务注册到注册中心
+eureka:
+  server:
+    ip: localhost
+    port: 1112
+  instance:
+    instance-id: ${spring.application.name}:${spring.cloud.client.ip-address}:${server.port}
+    prefer-ip-address: true #显示ip,浏览器以ip方式请求。
+    #域名
+#    hostname: localhost
+    #查看健康运行状态
+    health-check-url-path: /actuator/health
+    status-page-url-path: /actuator/info
+  client:
+    service-url:
+      defaultZone: http://${eureka.server.ip}:${eureka.server.port}/eureka/
+spring:
+  security:
+      user:
+        name: admin
+        password: 123456
+  cloud:
+    #git配置中心
+    config:
+      server:
+        git:
+          uri: https://github.com/xrlj/config-repo-dev
+          #git的配置文件会加载到本地的目录
+          basedir: target/config
+          # 设置超时
+          timeout: 4
+          force-pull: true  #每次都强制拉取远程git的配置更新本地。
+          default-label: master
+    bus:
+      enabled: true
+      trace:
+        enabled: true
+  #          search-paths:
+  # spring-cloud-bus刷新配置
+  #http://localhost:15672/
+  rabbitmq:
+      host: 172.31.31.31
+      port: 5672
+      username: admin
+      password: 123456
+      publisher-confirms: true
+      virtual-host: xr_vhost
+
+encrypt:
+  fail-on-error: false
+</code></pre><p>注意开启：<code>spring.cloud.bus.enable=true</code>,<code>spring.cloud.bus.trace.enable=true</code>。</p>
+<h3 id="温馨提醒"><a href="#温馨提醒" class="headerlink" title="温馨提醒"></a>温馨提醒</h3><p>由于添加了安全依赖：</p>
+<pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-security&lt;/artifactId&gt;
+&lt;/dependency&gt;
+</code></pre><p>所以config-server的请求是要先登陆验证的。那么，就要要配置<code>spring-security</code>，否则后面的<code>post</code>请求将会被拒绝。添加配置类如下：    </p>
+<pre><code>package com.xrlj.configserver;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+
+@Configuration
+@EnableWebSecurity
+public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.csrf().disable().authorizeRequests()
+                .anyRequest().authenticated().and()
+                .httpBasic();
+    }
+}
+</code></pre><h2 id="其它业务服务service-sys-common"><a href="#其它业务服务service-sys-common" class="headerlink" title="其它业务服务service-sys-common"></a>其它业务服务service-sys-common</h2><p>添加与配置刷新相关依赖：</p>
+<pre><code> &lt;!-- 用户修改git文件，调用接口自动刷新： --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;!--rabbitmq实时刷新配置--&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-cloud-starter-bus-amqp&lt;/artifactId&gt;
+&lt;/dependency&gt;
+</code></pre><p>关键配置：</p>
+<pre><code>spring:
+  cloud:
+    bus:
+      enabled: true
+      trace:
+        enabled: true
+#    refresh:
+#      extra-refreshable: javax.sql.DataSource  #该版本中，默认数据源是HikariDataSource，不配置这个，刷新配置报错。
+management:
+  endpoints:
+    web:
+      exposure:
+        include: &quot;*&quot;
+</code></pre><p>和config-server中一样，星号暴露所有站点，还要bus的一些配置开启。这里有个不同点，<code>spring.cloud.refresh.extra-refreshable=javax.sql.DataSource</code>,这里先注释掉，后面再补充说明下。</p>
+<h2 id="验证配置刷新"><a href="#验证配置刷新" class="headerlink" title="验证配置刷新"></a>验证配置刷新</h2><p>1.在<code>service-sys-common</code>服务中新建<code>TestController.java</code></p>
+<pre><code>@RefreshScope
+@RestController
+public class TestController {
+
+     @Value(&quot;${foo}&quot;)
+     String foo;
+
+    @RequestMapping(value = &quot;/hi&quot;)
+    public String hi(){
+        return foo;
+    }
+}
+</code></pre><p>注意添加注解<code>@RefreshScope</code>。在配置仓库中对应文件添加属性<code>foo:version1</code>。 </p>
+<p>打开浏览器请求：<a href="http://localhost:9010/hi.正常会返回`foo`的值。" target="_blank" rel="noopener">http://localhost:9010/hi.正常会返回`foo`的值。</a>  </p>
+<p>更改foo的值，<code>foo:version2</code>,再次请求，看到返回还是version1，证明没刷新。下面刷新下，打开postman发送post刷新请求：localhost:9010/actuator/refresh</p>
+<p>然后我们会看到一个错误：    </p>
+<pre><code>2018-02-04 22:11:02.236 DEBUG 6104 --- [           main] o.s.b.d.LoggingFailureAnalysisReporter   : Application failed to start due to an exception
+
+org.springframework.boot.context.properties.bind.BindException: Failed to bind properties under &apos;spring.datasource.hikari&apos; to com.zaxxer.hikari.HikariDataSource
+    at org.springframework.boot.context.properties.bind.Binder.handleBindError(Binder.java:227) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.Binder.bind(Binder.java:203) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.Binder.bind(Binder.java:187) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.Binder.bind(Binder.java:169) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.ConfigurationPropertiesBinder.bind(ConfigurationPropertiesBinder.java:79) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor.postProcessBeforeInitialization(ConfigurationPropertiesBindingPostProcessor.java:167) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyBeanPostProcessorsBeforeInitialization(AbstractAutowireCapableBeanFactory.java:423) ~[spring-beans-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1702) ~[spring-beans-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:414) ~[spring-beans-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.cloud.context.properties.ConfigurationPropertiesRebinder.rebind(ConfigurationPropertiesRebinder.java:101) ~[spring-cloud-context-2.0.0.M5.jar:2.0.0.M5]
+    at org.springframework.cloud.context.properties.ConfigurationPropertiesRebinder.rebind(ConfigurationPropertiesRebinder.java:84) ~[spring-cloud-context-2.0.0.M5.jar:2.0.0.M5]
+    at org.springframework.cloud.context.properties.ConfigurationPropertiesRebinder.onApplicationEvent(ConfigurationPropertiesRebinder.java:132) ~[spring-cloud-context-2.0.0.M5.jar:2.0.0.M5]
+    at org.springframework.cloud.context.properties.ConfigurationPropertiesRebinder.onApplicationEvent(ConfigurationPropertiesRebinder.java:50) ~[spring-cloud-context-2.0.0.M5.jar:2.0.0.M5]
+    at org.springframework.context.event.SimpleApplicationEventMulticaster.doInvokeListener(SimpleApplicationEventMulticaster.java:172) ~[spring-context-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.context.event.SimpleApplicationEventMulticaster.invokeListener(SimpleApplicationEventMulticaster.java:165) ~[spring-context-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.context.event.SimpleApplicationEventMulticaster.multicastEvent(SimpleApplicationEventMulticaster.java:139) ~[spring-context-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.context.support.AbstractApplicationContext.publishEvent(AbstractApplicationContext.java:399) ~[spring-context-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.context.support.AbstractApplicationContext.publishEvent(AbstractApplicationContext.java:353) ~[spring-context-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration.afterSingletonsInstantiated(ConfigurationPropertiesRebinderAutoConfiguration.java:77) ~[spring-cloud-context-2.0.0.M5.jar:2.0.0.M5]
+    at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:778) ~[spring-beans-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:868) ~[spring-context-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:549) ~[spring-context-5.0.3.RELEASE.jar:5.0.3.RELEASE]
+    at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:138) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) [spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:388) [spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.SpringApplication.run(SpringApplication.java:327) [spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.SpringApplication.run(SpringApplication.java:1246) [spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.SpringApplication.run(SpringApplication.java:1234) [spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at uk.co.vhome.clubbed.svc.enquiryhandler.ClubbedSvcEnquiryHandlerApplication.main(ClubbedSvcEnquiryHandlerApplication.java:23) [classes/:na]
+Caused by: java.lang.IllegalStateException: Unable to set value for property schema
+    at org.springframework.boot.context.properties.bind.JavaBeanBinder$BeanProperty.setValue(JavaBeanBinder.java:306) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.JavaBeanBinder.bind(JavaBeanBinder.java:76) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.JavaBeanBinder.bind(JavaBeanBinder.java:59) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.JavaBeanBinder.bind(JavaBeanBinder.java:51) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.Binder.lambda$null$5(Binder.java:321) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:195) ~[na:na]
+    at java.base/java.util.ArrayList$ArrayListSpliterator.tryAdvance(ArrayList.java:1471) ~[na:na]
+    at java.base/java.util.stream.ReferencePipeline.forEachWithCancel(ReferencePipeline.java:127) ~[na:na]
+    at java.base/java.util.stream.AbstractPipeline.copyIntoWithCancel(AbstractPipeline.java:502) ~[na:na]
+    at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:488) ~[na:na]
+    at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:474) ~[na:na]
+    at java.base/java.util.stream.FindOps$FindOp.evaluateSequential(FindOps.java:152) ~[na:na]
+    at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[na:na]
+    at java.base/java.util.stream.ReferencePipeline.findFirst(ReferencePipeline.java:476) ~[na:na]
+    at org.springframework.boot.context.properties.bind.Binder.lambda$bindBean$6(Binder.java:322) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.Binder$Context.withIncreasedDepth(Binder.java:415) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.Binder$Context.withBean(Binder.java:405) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.Binder.bindBean(Binder.java:319) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.Binder.bindObject(Binder.java:261) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    at org.springframework.boot.context.properties.bind.Binder.bind(Binder.java:198) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    ... 27 common frames omitted
+Caused by: java.lang.reflect.InvocationTargetException: null
+    at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[na:na]
+    at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) ~[na:na]
+    at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[na:na]
+    at java.base/java.lang.reflect.Method.invoke(Method.java:564) ~[na:na]
+    at org.springframework.boot.context.properties.bind.JavaBeanBinder$BeanProperty.setValue(JavaBeanBinder.java:303) ~[spring-boot-2.0.0.RC1.jar:2.0.0.RC1]
+    ... 46 common frames omitted
+Caused by: java.lang.IllegalStateException: The configuration of the pool is sealed once started.  Use HikariConfigMXBean for runtime changes.
+    at com.zaxxer.hikari.HikariConfig.setSchema(HikariConfig.java:951) ~[HikariCP-2.7.6.jar:na]
+    ... 51 common frames omitted
+
+2018-02-04 22:11:02.237 ERROR 6104 --- [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Failed to bind properties under &apos;spring.datasource.hikari&apos; to com.zaxxer.hikari.HikariDataSource:
+
+    Property: spring.datasource.hikari.schema
+    Value: ${application.database.schema}
+    Origin: class path resource [application.properties]:11:33
+    Reason: Unable to set value for property schema
+
+Action:
+
+Update your application&apos;s configuration
+
+
+Process finished with exit code 1
+</code></pre><p>爆出该异常源码地方：类ConfigurationPropertiesRebinder</p>
+<pre><code>@ManagedOperation
+public boolean rebind(String name) {
+    if (!this.beans.getBeanNames().contains(name)) {
+        return false;
+    }
+    if (this.applicationContext != null) {
+        try {
+            Object bean = this.applicationContext.getBean(name);
+            if (AopUtils.isAopProxy(bean)) {
+                bean = ProxyUtils.getTargetObject(bean);
+            }
+            if (bean != null) {
+                this.applicationContext.getAutowireCapableBeanFactory()
+                        .destroyBean(bean);
+                this.applicationContext.getAutowireCapableBeanFactory()
+                        .initializeBean(bean, name);
+                return true;
+            }
+        }
+        catch (RuntimeException e) {
+            this.errors.put(name, e);
+            throw e;
+        }
+        catch (Exception e) {
+            this.errors.put(name, e);
+            throw new IllegalStateException(&quot;Cannot rebind to &quot; + name, e);
+        }
+    }
+    return false;
+}    
+</code></pre><p> 问题原因：<br> 那是因为，我们在项目里自定义了动态数据源，采用了默认的数据库连接池HikariDataSource，该连接池，一旦创建，讲不可更改，所以当你刷新配置的时候，是一起连同数据源的相关配置也要刷新的，所以报错了。<br> 数据源配置如下：   </p>
+<pre><code>package com.xrlj.framework.spring.config.ds.myself;
+
+import com.xrlj.framework.dao.ds.DynamicDataSource;
+import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.context.annotation.*;
+
+/**
+ * 按规则定死的数据源。一主双从。适用所有服务。
+ */
+@Configuration
+public class DataSourceConfig {
+
+    @Bean(name = &quot;masterDataSource&quot;)
+    @Qualifier(&quot;masterDataSource&quot;)
+    @ConfigurationProperties(prefix=&quot;spring.myself-db.datasource.hikari.master&quot;)
+    public DataSource masterDataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+    @Bean(name = &quot;slave1DataSource&quot;)
+    @Qualifier(&quot;slave1DataSource&quot;)
+    @ConfigurationProperties(prefix=&quot;spring.myself-db.datasource.hikari.slave1&quot;)
+    public DataSource slave1DataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+    @Bean(name = &quot;slave2DataSource&quot;)
+    @Qualifier(&quot;slave2DataSource&quot;)
+    @ConfigurationProperties(prefix=&quot;spring.myself-db.datasource.hikari.slave2&quot;)
+    public DataSource slave2DataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+    /**
+     * 动态数据源: 通过AOP在不同数据源之间动态切换
+     *
+     * @return
+     */
+    @Primary
+    @Bean(name = &quot;dynamicDataSource&quot;)
+    @Qualifier(&quot;dynamicDataSource&quot;)
+    @Scope(&quot;singleton&quot;)
+    @DependsOn({&quot;masterDataSource&quot;,&quot;slave1DataSource&quot;,&quot;slave2DataSource&quot;}) //要加入这个注解，在数据源初始化之后，再初始化本bean，否则会出现循环依赖注入无法启动。
+    public DataSource dynamicDataSource(@Qualifier(&quot;masterDataSource&quot;) DataSource masterDataSource,
+                                        @Qualifier(&quot;slave1DataSource&quot;) DataSource slave1DataSource,@Qualifier(&quot;slave2DataSource&quot;) DataSource slave2DataSource) {
+        DynamicDataSource dynamicDataSource = new DynamicDataSource();
+        return dynamicDataSource.setMultipleDataSource(masterDataSource,slave1DataSource,slave2DataSource);
+    }
+}
+</code></pre><p>折腾了半天，终于在官网wiki中找到答案。<br>参考：<br><a href="https://github.com/spring-cloud/spring-cloud-commons/pull/395" target="_blank" rel="noopener">https://github.com/spring-cloud/spring-cloud-commons/pull/395</a><br><a href="https://github.com/spring-cloud/spring-cloud-commons/issues/318" target="_blank" rel="noopener">https://github.com/spring-cloud/spring-cloud-commons/issues/318</a> </p>
+<p>其中有一段问题解决的描述如下： </p>
+<p>After trying to implement this, we are going to add a documentation note, but you should either set spring.cloud.refresh.extra-refreshable=javax.sql.DataSource or, more appropriately, strongly type your DataSource bean</p>
+<pre><code>@Primary
+@Bean(name = &quot;dbDataSource&quot;)
+@ConfigurationProperties(prefix = &quot;datasource.db&quot;)
+public HikariDataSource dbDataSource() {
+    return DataSourceBuilder.create().type(HikariDataSource.class).build();
+}
+</code></pre><p>意思是说，解决该问题有两种方式：    </p>
+<p>1.添加配置：<code>spring.cloud.refresh.extra-refreshable=javax.sql.DataSource</code><br>2.配置数据源时，指定最终的类型，而不是接口类型。如下：<br>把  </p>
+<pre><code>@Bean(name = &quot;masterDataSource&quot;)
+@Qualifier(&quot;masterDataSource&quot;)
+@ConfigurationProperties(prefix=&quot;spring.myself-db.datasource.hikari.master&quot;)
+public DataSource masterDataSource() {
+    return DataSourceBuilder.create().type(HikariDataSource.class).build();
+}
+</code></pre><p>改成：     </p>
+<pre><code>@Bean(name = &quot;masterDataSource&quot;)
+@Qualifier(&quot;masterDataSource&quot;)
+@ConfigurationProperties(prefix=&quot;spring.myself-db.datasource.hikari.master&quot;)
+public DataSource masterDataSource() {
+    return DataSourceBuilder.create().type(HikariDataSource.class).build();
+}
+</code></pre><p>每个地方都改成明确的类型。   </p>
+<p>如果采用第一种方式，会出现另外一个问题，在后面代码中DynamicDataSource转型为DataSource将会报错。纳闷，狗日的……</p>
+<p>因此，只能采用方式二了。把数据源配置改如下：</p>
+<pre><code>package com.xrlj.framework.spring.config.ds.myself;
+
+import com.xrlj.framework.dao.ds.DynamicDataSource;
+import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.context.annotation.*;
+
+/**
+ * 按规则定死的数据源。一主双从。适用所有服务。
+ */
+@Configuration
+public class DataSourceConfig {
+
+    @Bean(name = &quot;masterDataSource&quot;)
+    @Qualifier(&quot;masterDataSource&quot;)
+    @ConfigurationProperties(prefix=&quot;spring.myself-db.datasource.hikari.master&quot;)
+    public HikariDataSource masterDataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+    @Bean(name = &quot;slave1DataSource&quot;)
+    @Qualifier(&quot;slave1DataSource&quot;)
+    @ConfigurationProperties(prefix=&quot;spring.myself-db.datasource.hikari.slave1&quot;)
+    public HikariDataSource slave1DataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+    @Bean(name = &quot;slave2DataSource&quot;)
+    @Qualifier(&quot;slave2DataSource&quot;)
+    @ConfigurationProperties(prefix=&quot;spring.myself-db.datasource.hikari.slave2&quot;)
+    public HikariDataSource slave2DataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+    /**
+     * 动态数据源: 通过AOP在不同数据源之间动态切换
+     *
+     * @return
+     */
+    @Primary
+    @Bean(name = &quot;dynamicDataSource&quot;)
+    @Qualifier(&quot;dynamicDataSource&quot;)
+    @Scope(&quot;singleton&quot;)
+    @DependsOn({&quot;masterDataSource&quot;,&quot;slave1DataSource&quot;,&quot;slave2DataSource&quot;}) //要加入这个注解，在数据源初始化之后，再初始化本bean，否则会出现循环依赖注入无法启动。
+    public DynamicDataSource dynamicDataSource(@Qualifier(&quot;masterDataSource&quot;) HikariDataSource masterDataSource,
+                                        @Qualifier(&quot;slave1DataSource&quot;) HikariDataSource slave1DataSource,@Qualifier(&quot;slave2DataSource&quot;) HikariDataSource slave2DataSource) {
+        DynamicDataSource dynamicDataSource = new DynamicDataSource();
+        return dynamicDataSource.setMultipleDataSource(masterDataSource,slave1DataSource,slave2DataSource);
+    }
+
+}
+</code></pre><p>再重新启动各服务，测试：<br>改动foo的值，刷新页面（post）： localhost:9010/actuator/refresh：</p>
+<img src="/2019/04/20/scloud-properties-refresh/a-1.png">
+<p>再请求<code>/hi</code>:   </p>
+<img src="/2019/04/20/scloud-properties-refresh/a-2.png">
+<p>我们看到，foo的值已经在线刷新。无需重启服务。    </p>
+<p>如果是多个实例，只要任何一个实例执行了刷新请求，所有实例都会同步刷新的。</p>
+<h2 id="统一在config-server端刷新配置"><a href="#统一在config-server端刷新配置" class="headerlink" title="统一在config-server端刷新配置"></a>统一在config-server端刷新配置</h2><p>上面我们的测试，都是对每个业务服务进行配置刷新的。如果业务服务很多的话，就做不到统一刷新了，所以我们这里介绍在配置中心端刷新配置。   </p>
+<p>流程是，请求config-server的刷新请求，它会向mq发送配置刷新通知，然后，所有参与订阅的服务的配置都会收到刷新的通知时间，然后自动刷新。当然，也可以指定只刷新某个服务的。  </p>
+<p>更改foo的值，发起刷新请求，注意，请求的是config-server的地址：</p>
+<p><a href="http://localhost:3331/actuator/bus-refresh" target="_blank" rel="noopener">http://localhost:3331/actuator/bus-refresh</a>   </p>
+<p>注意请求地址，是<code>bus-refresh</code>，而不是<code>refresh</code>。否则不成功。</p>
+<img src="/2019/04/20/scloud-properties-refresh/b-1.png">
+<p>这里要注意下，请求里面要添加认证信息。因为config-server里面引入了<code>spring-security</code>模块，而且要添加安全配置<code>WebSecurityConfiguration</code>,否则会出现请求需要验证或者请求拒绝导致不成功。  </p>
+<p>看请求结果图，请求返回状态为204 No Content,显示请求成功，但是没有返回内容。不知道为啥……</p>
+<p>再次请求业务服务的<code>/hi</code>,可以看到，配置已经在线刷新。成功了！</p>
+<h2 id="利用github的Webhooks功能自动刷新"><a href="#利用github的Webhooks功能自动刷新" class="headerlink" title="利用github的Webhooks功能自动刷新"></a>利用github的Webhooks功能自动刷新</h2><p>达到的目的是，改动配置后，提交到git仓库，然后触发事件发起请求config-server的刷新请求。达到自动目的。</p>
+<p>webhooks的使用，这里不做介绍。</p>
+<p>略……</p>
+</div><div class="tags"></div><div class="post-share"><div class="bdsharebuttonbox"><span style="float:left;line-height: 28px;height: 28px;font-size:16px;font-weight:blod">分享到：</span><a href="#" data-cmd="more" class="bds_more"></a><a href="#" data-cmd="mshare" title="分享到一键分享" class="bds_mshare"></a><a href="#" data-cmd="fbook" title="分享到Facebook" class="bds_fbook"></a><a href="#" data-cmd="twi" title="分享到Twitter" class="bds_twi"></a><a href="#" data-cmd="linkedin" title="分享到linkedin" class="bds_linkedin"></a><a href="#" data-cmd="youdao" title="分享到有道云笔记" class="bds_youdao"></a><a href="#" data-cmd="evernotecn" title="分享到印象笔记" class="bds_evernotecn"></a><a href="#" data-cmd="weixin" title="分享到微信" class="bds_weixin"></a><a href="#" data-cmd="qzone" title="分享到QQ空间" class="bds_qzone"></a><a href="#" data-cmd="tsina" title="分享到新浪微博" class="bds_tsina"></a></div></div><div class="post-nav"><a href="/2019/05/04/spring-boot-record/" class="pre">spring-boot使用记录</a><a href="/2019/03/19/fescar-start/" class="next">分布式事务fescar入门</a></div><div id="comments"></div></div></div></div><div class="layout-r"><div id="sidebar"><div class="search-pla"></div><div id="toc" class="widget"><div class="widget-title"><i class="fa fa-fei">文章目录</i></div><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#服务注册发现中心eureka-server"><span class="toc-text">服务注册发现中心eureka-server</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#配置中心config-server"><span class="toc-text">配置中心config-server</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#关键依赖："><span class="toc-text">关键依赖：</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#配置"><span class="toc-text">配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#温馨提醒"><span class="toc-text">温馨提醒</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#其它业务服务service-sys-common"><span class="toc-text">其它业务服务service-sys-common</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#验证配置刷新"><span class="toc-text">验证配置刷新</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#统一在config-server端刷新配置"><span class="toc-text">统一在config-server端刷新配置</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#利用github的Webhooks功能自动刷新"><span class="toc-text">利用github的Webhooks功能自动刷新</span></a></li></ol></div><div class="widget"><div class="widget-title"><i class="fa fa-xie"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/ng2-pdfjs-viewer-start/">angular pdf 浏览插件ng2-pdfjs-viewer</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/github-issue/">github使用问题收集</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/mupdf/">MUPDF-一个pdf文件处理利器</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/10/19/kafka-start/">kafka入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/09/02/redmine-docker-install/">docker环境安装redmine</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/07/03/Hugo-Netlify-Forestry/">Hugo + Netlify +Forestry 发布hugo静态网站</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/29/hugo-start/">静态网站生成工具-Hugo</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/28/architecture-c4model/">可视化架构-c4介绍</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/18/minio-start/">分布式文件存储系统 MINIO入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/06/java-jni/">JAVA JNI入门</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-gui"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/CentOs/">CentOs</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kubernetes/">Kubernetes</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Nginx/">Nginx</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Pivotal-Web-Service/">Pivotal Web Service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/TypeScript/">TypeScript</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/angular/">angular</a><span class="category-list-count">8</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/api-manage/">api-manage</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/aws/">aws</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/docker/">docker</a><span class="category-list-count">18</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/flutter/">flutter</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/git/">git</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/github/">github</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/gitlab/">gitlab</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/http协议/">http协议</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/hugo/">hugo</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/idea/">idea</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java/">java</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-io/">java-io</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-jni/">java-jni</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-nio/">java-nio</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/javapoet/">javapoet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jpa-hibernate/">jpa/hibernate</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/json/">json</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jvm/">jvm</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jwt/">jwt</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/kafka/">kafka</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/linux/">linux</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/maven/">maven</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/micro-service/">micro-service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/mysql/">mysql</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/nginx/">nginx</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ngrok/">ngrok</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/npm/">npm</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/pdf/">pdf</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rabbitmq/">rabbitmq</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redmine/">redmine</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rocketmq/">rocketmq</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/security/">security</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/servlet/">servlet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shadowsocks/">shadowsocks</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shiro/">shiro</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-boot/">spring-boot</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-cloud/">spring-cloud</a><span class="category-list-count">11</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/teamcity/">teamcity</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ubuntu/">ubuntu</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/vagrant/">vagrant</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/zookeeper/">zookeeper</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式系统/">分布式系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/区块链/">区块链</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/密码/">密码</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/持续集成/">持续集成</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/文件存储系统/">文件存储系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/服务网格/">服务网格</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/架构/">架构</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/监控/">监控</a><span class="category-list-count">2</span></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-biao"> 标签</i></div><div class="tagcloud"><a href="/tags/nginx负载均衡/" style="font-size: 15px;">nginx负载均衡</a> <a href="/tags/apidoc/" style="font-size: 15px;">apidoc</a> <a href="/tags/aws云服务器/" style="font-size: 15px;">aws云服务器</a> <a href="/tags/centos-jdk8-install/" style="font-size: 15px;">centos-jdk8-install</a> <a href="/tags/centos登录/" style="font-size: 15px;">centos登录</a> <a href="/tags/mysql-mysql8/" style="font-size: 15px;">mysql mysql8</a> <a href="/tags/concourse/" style="font-size: 15px;">concourse</a> <a href="/tags/api-version-manage-spring-boot中API版本迭代管理/" style="font-size: 15px;">api-version-manage,spring-boot中API版本迭代管理</a> <a href="/tags/cron-grammar/" style="font-size: 15px;">cron-grammar</a> <a href="/tags/snowflake算法/" style="font-size: 15px;">snowflake算法</a> <a href="/tags/centos-docker-install/" style="font-size: 15px;">centos-docker-install</a> <a href="/tags/docker镜像创建、docker容器启动、docker发布web应用/" style="font-size: 15px;">docker镜像创建、docker容器启动、docker发布web应用</a> <a href="/tags/docker-ce安装/" style="font-size: 15px;">docker ce安装</a> <a href="/tags/docker-容器/" style="font-size: 15px;">docker 容器</a> <a href="/tags/docker数据管理/" style="font-size: 15px;">docker数据管理</a> <a href="/tags/基础概念/" style="font-size: 15px;">基础概念</a> <a href="/tags/docker镜像/" style="font-size: 15px;">docker镜像</a> <a href="/tags/docker网络/" style="font-size: 15px;">docker网络</a> <a href="/tags/git-tag/" style="font-size: 15px;">git-tag</a> <a href="/tags/git分支、github分支/" style="font-size: 15px;">git分支、github分支</a> <a href="/tags/git-server-build/" style="font-size: 15px;">git-server-build</a> <a href="/tags/git-install-in-centos/" style="font-size: 15px;">git-install-in-centos</a> <a href="/tags/hashicorp-vault/" style="font-size: 15px;">hashicorp-vault</a> <a href="/tags/http-overview/" style="font-size: 15px;">http-overview</a> <a href="/tags/hibernate-relation/" style="font-size: 15px;">hibernate-relation</a> <a href="/tags/git问题/" style="font-size: 15px;">git问题</a> <a href="/tags/istio/" style="font-size: 15px;">istio</a> <a href="/tags/jackson/" style="font-size: 15px;">jackson</a> <a href="/tags/cglib/" style="font-size: 15px;">cglib</a> <a href="/tags/jvm监控工具/" style="font-size: 15px;">jvm监控工具</a> <a href="/tags/gc垃圾回收/" style="font-size: 15px;">gc垃圾回收</a> <a href="/tags/javapoet-apt-annotation/" style="font-size: 15px;">javapoet-apt-annotation</a> <a href="/tags/k8s/" style="font-size: 15px;">k8s</a> <a href="/tags/jenkins-java-maven/" style="font-size: 15px;">jenkins-java-maven</a> <a href="/tags/linux-command/" style="font-size: 15px;">linux-command</a> <a href="/tags/ubuntu-navicat/" style="font-size: 15px;">ubuntu-navicat</a> <a href="/tags/maven常用功能/" style="font-size: 15px;">maven常用功能</a> <a href="/tags/微服务实践总结/" style="font-size: 15px;">微服务实践总结</a> <a href="/tags/maven-error/" style="font-size: 15px;">maven-error</a> <a href="/tags/mysql建表规范/" style="font-size: 15px;">mysql建表规范</a> <a href="/tags/mysql一主多从配置/" style="font-size: 15px;">mysql一主多从配置</a> <a href="/tags/mysql-expain/" style="font-size: 15px;">mysql-expain</a> <a href="/tags/nginx能做什么/" style="font-size: 15px;">nginx能做什么</a> <a href="/tags/ngrok使用/" style="font-size: 15px;">ngrok使用</a> <a href="/tags/npm使用问题/" style="font-size: 15px;">npm使用问题</a> <a href="/tags/mysql使用问题收藏/" style="font-size: 15px;">mysql使用问题收藏</a> <a href="/tags/pws-push/" style="font-size: 15px;">pws-push</a> <a href="/tags/redis-主从-集群/" style="font-size: 15px;">redis,主从,集群</a> <a href="/tags/redis-密码-安全/" style="font-size: 15px;">redis,密码,安全</a> <a href="/tags/redis命令/" style="font-size: 15px;">redis命令</a> <a href="/tags/redis分布式锁/" style="font-size: 15px;">redis分布式锁</a> <a href="/tags/rabbitmq-install/" style="font-size: 15px;">rabbitmq-install</a> <a href="/tags/redis发布订阅/" style="font-size: 15px;">redis发布订阅</a> <a href="/tags/redis哨兵模式/" style="font-size: 15px;">redis哨兵模式</a> <a href="/tags/redis-install/" style="font-size: 15px;">redis-install</a> <a href="/tags/redmine-mongrel-nginx/" style="font-size: 15px;">redmine-mongrel-nginx</a> <a href="/tags/redmine插件/" style="font-size: 15px;">redmine插件</a> <a href="/tags/rocketmq入门/" style="font-size: 15px;">rocketmq入门</a> <a href="/tags/restful-api/" style="font-size: 15px;">restful-api</a> <a href="/tags/change-contextpath-way/" style="font-size: 15px;">change-contextpath-way</a> <a href="/tags/spring-cloud-配置中心加解密/" style="font-size: 15px;">spring-cloud(配置中心加解密)</a> <a href="/tags/feign使用常见问题/" style="font-size: 15px;">feign使用常见问题</a> <a href="/tags/feign/" style="font-size: 15px;">feign</a> <a href="/tags/hystrix/" style="font-size: 15px;">hystrix</a> <a href="/tags/hystrix-dashboard/" style="font-size: 15px;">hystrix,dashboard</a> <a href="/tags/zuul-exception/" style="font-size: 15px;">zuul-exception</a> <a href="/tags/zuul-filters/" style="font-size: 15px;">zuul-filters</a> <a href="/tags/ELK/" style="font-size: 15px;">ELK</a> <a href="/tags/zuul-start/" style="font-size: 15px;">zuul-start</a> <a href="/tags/spinnaker-start/" style="font-size: 15px;">spinnaker-start</a> <a href="/tags/shadowsocks-go/" style="font-size: 15px;">shadowsocks-go</a> <a href="/tags/spring-cors/" style="font-size: 15px;">spring-cors</a> <a href="/tags/spring-cache/" style="font-size: 15px;">spring cache</a> <a href="/tags/shiro入门/" style="font-size: 15px;">shiro入门</a> <a href="/tags/spring-boot-async/" style="font-size: 15px;">spring-boot-async</a> <a href="/tags/spring-boot-jar/" style="font-size: 15px;">spring-boot-jar</a> <a href="/tags/spring-mvc国际化/" style="font-size: 15px;">spring mvc国际化</a> <a href="/tags/teamcity-start/" style="font-size: 15px;">teamcity-start</a> <a href="/tags/jpa读写分离配置/" style="font-size: 15px;">jpa读写分离配置</a> <a href="/tags/vagrant-start/" style="font-size: 15px;">vagrant-start</a> <a href="/tags/vault/" style="font-size: 15px;">vault</a> <a href="/tags/wkhtmltopdf/" style="font-size: 15px;">wkhtmltopdf</a> <a href="/tags/website-high-performance/" style="font-size: 15px;">website-high-performance</a> <a href="/tags/apache-curator/" style="font-size: 15px;">apache curator</a> <a href="/tags/spring-boot-filter/" style="font-size: 15px;">spring-boot-filter</a> <a href="/tags/后端架构师技术图谱/" style="font-size: 15px;">后端架构师技术图谱</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-archive"> 归档</i></div><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-you"> 友情链接</i></div><ul></ul><a href="http://blog.didispace.com/" title="程序员DD|翟永超的博客" target="_blank">程序员DD|翟永超的博客</a><ul></ul><a href="http://www.bysocket.com/" title="泥瓦匠的博客" target="_blank">泥瓦匠的博客</a><ul></ul><a href="http://itmuch.com/" title="周立|Spring Cloud的博客" target="_blank">周立|Spring Cloud的博客</a><ul></ul><a href="http://itmuch.com/" title="梁桂钊的博客" target="_blank">梁桂钊的博客</a><ul></ul><a href="https://www.cnkirito.moe/" title="徐靖峰|个人博客" target="_blank">徐靖峰|个人博客</a><ul></ul><a href="http://www.ityouknow.com/" title="纯洁的微笑的博客" target="_blank">纯洁的微笑的博客</a><ul></ul><a href="https://crossoverjie.top/" title="crossoverJie blog" target="_blank">crossoverJie blog</a><ul></ul><a href="https://my.oschina.net/u/1859679/blog" title="wier的博客" target="_blank">wier的博客</a><ul></ul><a href="http://www.ictgu.cn/" title="Any-Video" target="_blank">Any-Video</a><ul></ul><a href="https://www.processon.com/" title="在线作图" target="_blank">在线作图</a><ul></ul><a href="http://spring4all.com/" title="spring4all" target="_blank">spring4all</a><ul></ul><a href="https://www.oschina.net/" title="开源中国" target="_blank">开源中国</a><ul></ul><a href="https://www.w3school.com.cn/" title="w3school学习网" target="_blank">w3school学习网</a><ul></ul><a href="https://angular.cn/" title="angular中文教程" target="_blank">angular中文教程</a><ul></ul><a href="http://tutorials.jenkov.com" title="java教程" target="_blank">java教程</a><ul></ul><a href="http://javasampleapproach.com/" title="javasampleapproach-java教程" target="_blank">javasampleapproach-java教程</a><ul></ul><a href="https://www.programcreek.com/" title="programcreek-java教程" target="_blank">programcreek-java教程</a><ul></ul><a href="https://howtodoinjava.com/" title="howtodoinjava" target="_blank">howtodoinjava</a><ul></ul><a href="http://docs.oracle.com/javase/9/docs/api/" title="javadoc(8/9)" target="_blank">javadoc(8/9)</a><ul></ul><a href="https://docs.oracle.com/javase/tutorial/essential/io/" title="java-core/io" target="_blank">java-core/io</a><ul></ul><a href="https://github.com/eugenp/tutorials" title="eugenp/tutorials" target="_blank">eugenp/tutorials</a><ul></ul><a href="http://www.markdown.cn/" title="markdown参考" target="_blank">markdown参考</a><ul></ul><a href="https://www.baeldung.com/" title="spring教程baeldung" target="_blank">spring教程baeldung</a><ul></ul><a href="https://createchance.github.io/" title="java并发编程" target="_blank">java并发编程</a><ul></ul><a href="http://ifeve.com/" title="并发编程" target="_blank">并发编程</a><ul></ul><a href="http://tutorials.jenkov.com/java-io/index.html" title="Java IO Tutorial" target="_blank">Java IO Tutorial</a><ul></ul><a href="http://tutorials.jenkov.com/java-nio/index.html" title="Java NIO Tutorial" target="_blank">Java NIO Tutorial</a><ul></ul><a href="https://tonybai.com/articles/" title="tonybai-golang" target="_blank">tonybai-golang</a></div></div></div></div><a id="totop" href="#top"></a><div id="footer"><div class="footer-info"><p><a href="/baidusitemap.xml">Baidu Site Haritası</a> |  <a href="/atom.xml">订阅</a> |  <a href="/about/">关于</a></p><p>本站总访问量：<i id="busuanzi_container_site_pv"><i id="busuanzi_value_site_pv"></i></i>次</p><p><span> Copyright &copy;<a href="/." rel="nofollow">xinxiamu.</a></span><span> Theme by<a rel="nofollow" target="_blank" href="https://github.com/chaooo/hexo-theme-BlueLake"> BlueLake.</a></span><span> Count by<a href="http://busuanzi.ibruce.info/"> busuanzi.</a></span><span> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a></span></p></div></div></div><script src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="/js/search.json.js?v=2.0.1"></script><script type="text/javascript" src="/js/toctotop.js?v=2.0.1" async></script><script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":["mshare","weixin","tsina","qzone","linkedin","fbook","twi","print","renren","sqq","evernotecn","bdysc","tqq","tqf","bdxc","kaixin001","tieba","douban","bdhome","thx","ibaidu","meilishuo","mogujie","diandian","huaban","duitang","hx","fx","youdao","sdo","qingbiji","people","xinhua","mail","isohu","yaolan","wealink","ty","iguba","h163","copy"],"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{},"image":{"viewList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"]}};with(document)0[(getElementsByTagName('head')[0]||head).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+</script></body></html>

@@ -1,0 +1,424 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="技术博客"><title>spring-data-jpa动态数据源读写分离 | 小木</title><link rel="stylesheet" type="text/css" href="//fonts.proxy.ustclug.org/css?family=Source+Code+Pro"><link rel="stylesheet" type="text/css" href="/css/style.css?v=2.0.1"><link rel="stylesheet" type="text/css" href="/css/highlight.css?v=2.0.1"><link rel="Shortcut Icon" href="/favicon.ico"><link rel="bookmark" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">spring-data-jpa动态数据源读写分离</h1><a id="logo" href="/.">小木</a><p class="description">专注、忍耐、坚定、从容!!! 乌龟快跑……</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div><div id="search-form"><div id="result-mask" class="hide"></div><label><input id="search-key" type="text" autocomplete="off" placeholder="Arama"></label><div id="result-wrap" class="hide"><div id="search-result"></div></div><div class="hide"><template id="search-tpl"><div class="item"><a href="/{path}" title="{title}"><div class="title">{title}</div><div class="time">{date}</div><div class="tags">{tags}</div></a></div></template></div></div></div><div id="layout" class="layout-g"><div class="layout-l"><div class="content_container"><div class="post"><h1 class="post-title">spring-data-jpa动态数据源读写分离</h1><div class="post-meta"><a href="/2017/11/08/spring-jpa-multiple-datasource/#comments" class="comment-count"></a><p><span class="date">Nov 08, 2017</span><span><a href="/categories/spring-boot/" class="category">spring-boot</a></span><span><i id="busuanzi_container_page_pv"><i id="busuanzi_value_page_pv"></i><i>点击</i></i></span></p></div><div class="post-content"><p>在代码层面配置多数据源，手动或者注解方式自动切换数据源，达到读写分离的目的。可以jpa，jdbc，mybatis共存。</p>
+<h2 id="1-配置数据源"><a href="#1-配置数据源" class="headerlink" title="1. 配置数据源"></a>1. 配置数据源</h2><p>采用阿里druid数据源配置连接池。</p>
+<p>具体配置如下：</p>
+<pre><code>package service.basic.user.config.ds;
+
+import com.alibaba.druid.filter.Filter;
+import com.alibaba.druid.filter.logging.Log4j2Filter;
+import com.alibaba.druid.filter.stat.StatFilter;
+import com.alibaba.druid.pool.DruidDataSource;
+import com.alibaba.druid.wall.WallConfig;
+import com.alibaba.druid.wall.WallFilter;
+import com.ymu.spcselling.infrastructure.dao.ds.DynamicDataSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.*;
+import org.springframework.core.env.Environment;
+
+import javax.sql.DataSource;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+
+/**
+ * 配置数据源
+ */
+@Configuration
+public class DataSourceConfig {
+
+    /**
+     * druid监控filter配置。
+     * @return
+     */
+    @Bean
+    public StatFilter statFilter() {
+        StatFilter statFilter = new StatFilter();
+        statFilter.setSlowSqlMillis(5 * 1000); //超过5秒执行的为慢sql
+        statFilter.setLogSlowSql(true); //日志记录慢sql
+        statFilter.setMergeSql(true); //相同sql合并
+        return statFilter;
+    }
+
+    //----------- sql注入攻击防御配置 start ---------//
+
+    @Bean
+    public WallConfig wallConfig() {
+        WallConfig wallConfig = new WallConfig();
+        wallConfig.setDir(&quot;classpath:druid/wall/mysql&quot;); //sql过滤规则装载位置。
+        return wallConfig;
+    }
+
+    @Bean
+    public WallFilter wallFilter() {
+        WallFilter wallFilter = new WallFilter();
+        wallFilter.setDbType(&quot;mysql&quot;); //指定数据库类型。
+        wallFilter.setConfig(wallConfig());
+        return wallFilter;
+    }
+
+    //----------- sql注入攻击防御配置 end ---------//
+
+
+    /**
+     * 打印sql语句。
+     * @return
+     */
+    @Bean(name = &quot;log4j2Filter&quot;)
+    public Log4j2Filter log4j2Filter() {
+        Log4j2Filter log4j2Filter = new Log4j2Filter();
+        log4j2Filter.setConnectionLogEnabled(false);
+        log4j2Filter.setResultSetLogEnabled(true); //显示sql
+        log4j2Filter.setDataSourceLogEnabled(false);
+        log4j2Filter.setStatementExecutableSqlLogEnable(true); //输出可执行的SQL
+        log4j2Filter.setStatementLogEnabled(false);
+        return log4j2Filter;
+    }
+
+
+
+    //-------------- 数据源配置 start ---------------//
+
+    /**
+     * 会员主库（spcs_user）数据源。
+     *
+     * @return
+     * @throws SQLException
+     */
+    @Bean(name = &quot;spcsUserDataSourceWrite&quot;)
+    @Qualifier(&quot;spcsUserDataSourceWrite&quot;)
+    public DataSource spcsUserDataSource(@Autowired SpcsUserDSArgs args) throws SQLException {
+        DruidDataSource dataSource = new DruidDataSource();
+        dataSource.setUrl(args.getUrl());
+        dataSource.setUsername(args.getUsername());
+        dataSource.setPassword(args.getPassword());
+        dataSource.setDriverClassName(args.getDriverClassName());
+        dataSource.setInitialSize(args.getInitialSize());
+        dataSource.setMinIdle(args.getMinIdle());
+        dataSource.setMaxActive(args.getMaxActive());
+        dataSource.setMaxWait(args.getMaxWait());
+        dataSource.setTimeBetweenEvictionRunsMillis(args.getTimeBetweenEvictionRunsMillis());
+        dataSource.setMinEvictableIdleTimeMillis(args.getMinEvictableIdleTimeMillis());
+
+        dataSource.setUseGlobalDataSourceStat(true); //合并多个DruidDataSource的监控数据
+
+        List&lt;Filter&gt; proxyFilters = new ArrayList&lt;&gt;();
+        proxyFilters.add(statFilter());
+        proxyFilters.add(log4j2Filter());
+        proxyFilters.add(wallFilter());
+        dataSource.setProxyFilters(proxyFilters);
+
+        return dataSource;
+    }
+
+    /**
+     * 会员从库（spcs_user_slave）数据源。
+     *
+     * @return
+     * @throws SQLException
+     */
+    @Bean(name = &quot;spcsUserDataSourceRead_0&quot;)
+    @Qualifier(&quot;spcsUserDataSourceRead_0&quot;)
+    public DataSource spcsUserSlaveDataSource(@Autowired SpcsUserSlaveDSArgs args) throws SQLException {
+        DruidDataSource dataSource = new DruidDataSource();
+        dataSource.setUrl(args.getUrl());
+        dataSource.setUsername(args.getUsername());
+        dataSource.setPassword(args.getPassword());
+        dataSource.setDriverClassName(args.getDriverClassName());
+        dataSource.setMinIdle(args.getMinIdle());
+        dataSource.setInitialSize(args.getInitialSize());
+        dataSource.setMaxActive(args.getMaxActive());
+        dataSource.setMaxWait(args.getMaxWait());
+        dataSource.setTimeBetweenEvictionRunsMillis(args.getTimeBetweenEvictionRunsMillis());
+        dataSource.setMinEvictableIdleTimeMillis(args.getMinEvictableIdleTimeMillis());
+
+        List&lt;Filter&gt; proxyFilters = new ArrayList&lt;&gt;();
+        proxyFilters.add(statFilter());
+        proxyFilters.add(log4j2Filter());
+        proxyFilters.add(wallFilter());
+        dataSource.setProxyFilters(proxyFilters);
+
+        return dataSource;
+    }
+
+
+    /**
+     * 动态数据源: 通过AOP在不同数据源之间动态切换
+     *
+     * @return
+     */
+    @Primary
+    @Bean(name = &quot;dataSource&quot;)
+    @Scope(&quot;singleton&quot;)
+    @DependsOn({&quot;spcsUserDataSourceWrite&quot;,&quot;spcsUserDataSourceRead_0&quot;}) //要加入这个注解，在数据源初始化之后，再初始化本bean，否则会出现循环依赖注入无法启动。
+    public DataSource dynamicDataSource(@Qualifier(&quot;spcsUserDataSourceWrite&quot;) DataSource spcsUserDataSource,
+                                          @Qualifier(&quot;spcsUserDataSourceRead_0&quot;) DataSource spcsUserSlaveDataSource) {
+        // 配置多数据源
+        Map&lt;Object, Object&gt; dsMap = new HashMap&lt;&gt;(5);
+        dsMap.put(DSType.SPCS_USER.name(), spcsUserDataSource);
+        dsMap.put(DSType.SPCS_USER_SLAVE.name(), spcsUserSlaveDataSource);
+
+        DynamicDataSource dynamicDataSource = new DynamicDataSource();
+        // 默认数据源
+        dynamicDataSource.setDefaultTargetDataSource(spcsUserDataSource);
+        dynamicDataSource.setTargetDataSources(dsMap);
+        return dynamicDataSource;
+    }
+
+}
+</code></pre><blockquote>
+<p><em>注意</em>：dynamicDataSource中一定要加入注解 @Primary，单多个数据元时候，默认取该个，避免无法区分。另外特别注意注解：@DependsOn。一定要加该注解，在实际实际数据源注入后，再注入动态数据源，否则会出现循环依赖导致系统无法启动的局面。</p>
+</blockquote>
+<h2 id="2-实现自己的数据源路由（关键）"><a href="#2-实现自己的数据源路由（关键）" class="headerlink" title="2. 实现自己的数据源路由（关键）"></a>2. 实现自己的数据源路由（关键）</h2><p>相当于多数据源的路由功能。</p>
+<pre><code>package com.ymu.spcselling.infrastructure.dao.ds;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
+
+public class DynamicDataSource extends AbstractRoutingDataSource {
+
+    private static final Logger log = LoggerFactory.getLogger(DynamicDataSource.class);
+
+    @Override
+    protected Object determineCurrentLookupKey() {
+        log.debug(&quot;数据源为{}&quot;, DataSourceContextHolder.getDS());
+        //可以做一个简单的负载均衡策略
+        return DataSourceContextHolder.getDS();
+    }
+
+}
+</code></pre><h2 id="3-持有数据源"><a href="#3-持有数据源" class="headerlink" title="3. 持有数据源"></a>3. 持有数据源</h2><pre><code>package com.ymu.spcselling.infrastructure.dao.ds;
+
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+public class DataSourceContextHolder {
+
+    private static final Logger LOGGER = LogManager.getLogger(DataSourceContextHolder.class);
+
+    private static final ThreadLocal&lt;String&gt; contextHolder = new ThreadLocal&lt;&gt;();
+
+    /**
+     * 设置数据源名。
+     * @param dbType
+     */
+    public static void setDS(String dbType) {
+        if (dbType == null) {
+            throw new NullPointerException(&quot;数据源不能null&quot;);
+        }
+        LOGGER.debug(&quot;切换到{}数据源&quot;, dbType);
+        contextHolder.set(dbType);
+    }
+
+    /**
+     * 获取数据源名。
+     * @return
+     */
+    public static String getDS() {
+        return (contextHolder.get());
+    }
+
+    /**
+     * 清除数据源名。
+     */
+    public static void clearDS() {
+        contextHolder.remove();
+    }
+}
+</code></pre><h2 id="4-通过aop，注解方式持有数据源"><a href="#4-通过aop，注解方式持有数据源" class="headerlink" title="4. 通过aop，注解方式持有数据源"></a>4. 通过aop，注解方式持有数据源</h2><pre><code>package service.basic.user.config.ds;
+
+import com.ymu.spcselling.infrastructure.dao.ds.DSInject;
+import com.ymu.spcselling.infrastructure.dao.ds.DataSourceContextHolder;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.stereotype.Component;
+
+import java.lang.reflect.Method;
+
+/**
+ *  解析注入的数据源。
+ */
+@Aspect
+@Component
+public class DynamicDataSourceAspect {
+
+    @Before(&quot;@annotation(com.ymu.spcselling.infrastructure.dao.ds.DSInject)&quot;)
+    public void beforeSwitchDS(JoinPoint point) {
+
+        // 获得当前访问的class
+        Class&lt;?&gt; className = point.getTarget().getClass();
+
+        // 获得访问的方法名
+        String methodName = point.getSignature().getName();
+        // 得到方法的参数的类型
+        Class[] argClass = ((MethodSignature) point.getSignature()).getParameterTypes();
+        String dataSource = DSType.SPCS_USER.name(); //默认主库
+        try {
+            // 得到访问的方法对象
+            Method method = className.getMethod(methodName, argClass);
+
+            // 判断是否存在@DBInject注解
+            if (method.isAnnotationPresent(DSInject.class)) {
+                DSInject annotation = method.getAnnotation(DSInject.class);
+                // 取出注解中的数据源名
+                dataSource = annotation.value();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // 切换数据源
+        DataSourceContextHolder.setDS(dataSource);
+
+    }
+
+    @After(&quot;@annotation(com.ymu.spcselling.infrastructure.dao.ds.DSInject)&quot;)
+    public void afterSwitchDS(JoinPoint point) {
+        DataSourceContextHolder.clearDS();
+    }
+}
+</code></pre><hr>
+<pre><code>package com.ymu.spcselling.infrastructure.dao.ds;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target({ ElementType.PARAMETER, ElementType.METHOD })
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface DSInject {
+    String value() default &quot;&quot;;
+}
+</code></pre><h2 id="5-配置jpa"><a href="#5-配置jpa" class="headerlink" title="5. 配置jpa"></a>5. 配置jpa</h2><pre><code>package service.basic.user.config.ds;
+
+import com.ymu.spcselling.infrastructure.dao.BaseRepositoryFactoryBean;
+import net.sf.log4jdbc.sql.jdbcapi.DataSourceSpy;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
+import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import service.basic.user.common.Constants;
+
+import javax.persistence.EntityManager;
+import javax.sql.DataSource;
+import java.util.Map;
+
+@Configuration
+@EnableTransactionManagement
+@EnableJpaRepositories(entityManagerFactoryRef = &quot;entityManagerFactorySpcsUserDB&quot;, transactionManagerRef = &quot;transactionManagerSpcsUserDB&quot;, basePackages = {
+        Constants.SPCS_USER_REPOSITORY_PACKAGE_PATH}, repositoryFactoryBeanClass = BaseRepositoryFactoryBean.class)
+public class SpcsUserDBConfig {
+
+    @Autowired
+    Environment ev;
+
+    @Autowired
+    @Qualifier(&quot;dataSource&quot;)
+    private DataSource dataSource; // 数据源
+
+    @Primary
+    @Bean(name = &quot;entityManagerSpcsUser&quot;)
+    public EntityManager entityManager(EntityManagerFactoryBuilder builder) {
+        return entityManagerFactorySpcsUserDB(builder).getObject().createEntityManager();
+    }
+
+    @Primary
+    @Bean(name = &quot;entityManagerFactorySpcsUserDB&quot;)
+    public LocalContainerEntityManagerFactoryBean entityManagerFactorySpcsUserDB(EntityManagerFactoryBuilder builder) {
+        if (ev.acceptsProfiles(&quot;dev&quot;) || ev.acceptsProfiles(&quot;test&quot;)
+                || ev.acceptsProfiles(&quot;update&quot;)) {
+            dataSource = new DataSourceSpy(dataSource); // log4jdbc打印sql日志。
+        }
+        return builder.dataSource(dataSource).properties(getVendorProperties(dataSource))
+                .packages(Constants.SPCS_USER_ENTITY_PACKAGE_PATH)
+                .persistenceUnit(&quot;spcsUserUnit&quot;).build(); //实体管理器别名,多数据元要设置。
+    }
+
+    private Map&lt;String, String&gt; getVendorProperties(DataSource dataSource) {
+        JpaProperties jpaProperties = new JpaProperties();
+        return jpaProperties.getHibernateProperties(dataSource);
+    }
+
+    /**
+     * 开启事务。
+     *
+     * @param builder
+     * @return
+     */
+    @Primary
+    @Bean(name = &quot;transactionManagerSpcsUserDB&quot;)
+    public PlatformTransactionManager transactionManagerSpcsUserDB(EntityManagerFactoryBuilder builder) {
+        return new JpaTransactionManager(entityManagerFactorySpcsUserDB(builder).getObject());
+    }
+
+}
+</code></pre><blockquote>
+<p><em>注意</em>: 注入的数据源为上面配置的动态数据源。<br>@Autowired<br>@Qualifier(“dataSource”)<br>private DataSource dataSource; // 数据源    </p>
+</blockquote>
+<h2 id="6-配置spring-jdbcTemplate"><a href="#6-配置spring-jdbcTemplate" class="headerlink" title="6. 配置spring jdbcTemplate"></a>6. 配置spring jdbcTemplate</h2><pre><code>package service.basic.user.config.ds;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import javax.sql.DataSource;
+
+@Configuration
+@AutoConfigureAfter(DataSourceConfig.class)
+public class JdbcTemplateConfig {
+
+    @Autowired
+    @Qualifier(value = &quot;dataSource&quot;)
+    private DataSource dataSource;
+
+    /**
+     * spring jdbc。
+     *
+     * @return
+     */
+    @Bean(name = &quot;jdbcTemplate&quot;)
+    @Qualifier(&quot;jdbcTemplate&quot;)
+    public JdbcTemplate jdbcTemplate() {
+        return new JdbcTemplate(dataSource);
+    }
+}
+</code></pre><h2 id="7-使用"><a href="#7-使用" class="headerlink" title="7. 使用"></a>7. 使用</h2><ul>
+<li>方式一：<br>可在service层，也可在dao层做。<br>在开始操作数据库前调用：</li>
+</ul>
+<pre><code>DataSourceContextHolder.setDS(DSType.SPCS_USER_SLAVE.name());
+
+//查询数据
+
+DataSourceContextHolder.clearDS();
+</code></pre><ul>
+<li>方式二：<br>通过注解，可在service层，也可在dao层做。</li>
+</ul>
+<pre><code>@DSInject(value = Constants.SPCS_USER_SLAVE)
+@Override
+public User getUserByMobile(String mobile) {
+    return userDao.findUserByMobile(mobile);
+}    
+</code></pre></div><div class="tags"><a href="/tags/jpa读写分离配置/">jpa读写分离配置</a></div><div class="post-share"><div class="bdsharebuttonbox"><span style="float:left;line-height: 28px;height: 28px;font-size:16px;font-weight:blod">分享到：</span><a href="#" data-cmd="more" class="bds_more"></a><a href="#" data-cmd="mshare" title="分享到一键分享" class="bds_mshare"></a><a href="#" data-cmd="fbook" title="分享到Facebook" class="bds_fbook"></a><a href="#" data-cmd="twi" title="分享到Twitter" class="bds_twi"></a><a href="#" data-cmd="linkedin" title="分享到linkedin" class="bds_linkedin"></a><a href="#" data-cmd="youdao" title="分享到有道云笔记" class="bds_youdao"></a><a href="#" data-cmd="evernotecn" title="分享到印象笔记" class="bds_evernotecn"></a><a href="#" data-cmd="weixin" title="分享到微信" class="bds_weixin"></a><a href="#" data-cmd="qzone" title="分享到QQ空间" class="bds_qzone"></a><a href="#" data-cmd="tsina" title="分享到新浪微博" class="bds_tsina"></a></div></div><div class="post-nav"><a href="/2017/11/10/idea-use-ofen/" class="pre">idea 使用问题收集</a><a href="/2017/11/08/distributed-difficulty/" class="next">分布式系统几大难点</a></div><div id="comments"></div></div></div></div><div class="layout-r"><div id="sidebar"><div class="search-pla"></div><div id="toc" class="widget"><div class="widget-title"><i class="fa fa-fei">文章目录</i></div><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-配置数据源"><span class="toc-text">1. 配置数据源</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-实现自己的数据源路由（关键）"><span class="toc-text">2. 实现自己的数据源路由（关键）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-持有数据源"><span class="toc-text">3. 持有数据源</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-通过aop，注解方式持有数据源"><span class="toc-text">4. 通过aop，注解方式持有数据源</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-配置jpa"><span class="toc-text">5. 配置jpa</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-配置spring-jdbcTemplate"><span class="toc-text">6. 配置spring jdbcTemplate</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-使用"><span class="toc-text">7. 使用</span></a></li></ol></div><div class="widget"><div class="widget-title"><i class="fa fa-xie"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/ng2-pdfjs-viewer-start/">angular pdf 浏览插件ng2-pdfjs-viewer</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/github-issue/">github使用问题收集</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/mupdf/">MUPDF-一个pdf文件处理利器</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/10/19/kafka-start/">kafka入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/09/02/redmine-docker-install/">docker环境安装redmine</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/07/03/Hugo-Netlify-Forestry/">Hugo + Netlify +Forestry 发布hugo静态网站</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/29/hugo-start/">静态网站生成工具-Hugo</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/28/architecture-c4model/">可视化架构-c4介绍</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/18/minio-start/">分布式文件存储系统 MINIO入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/06/java-jni/">JAVA JNI入门</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-gui"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/CentOs/">CentOs</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kubernetes/">Kubernetes</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Nginx/">Nginx</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Pivotal-Web-Service/">Pivotal Web Service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/TypeScript/">TypeScript</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/angular/">angular</a><span class="category-list-count">8</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/api-manage/">api-manage</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/aws/">aws</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/docker/">docker</a><span class="category-list-count">18</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/flutter/">flutter</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/git/">git</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/github/">github</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/gitlab/">gitlab</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/http协议/">http协议</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/hugo/">hugo</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/idea/">idea</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java/">java</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-io/">java-io</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-jni/">java-jni</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-nio/">java-nio</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/javapoet/">javapoet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jpa-hibernate/">jpa/hibernate</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/json/">json</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jvm/">jvm</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jwt/">jwt</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/kafka/">kafka</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/linux/">linux</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/maven/">maven</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/micro-service/">micro-service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/mysql/">mysql</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/nginx/">nginx</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ngrok/">ngrok</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/npm/">npm</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/pdf/">pdf</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rabbitmq/">rabbitmq</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redmine/">redmine</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rocketmq/">rocketmq</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/security/">security</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/servlet/">servlet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shadowsocks/">shadowsocks</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shiro/">shiro</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-boot/">spring-boot</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-cloud/">spring-cloud</a><span class="category-list-count">11</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/teamcity/">teamcity</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ubuntu/">ubuntu</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/vagrant/">vagrant</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/zookeeper/">zookeeper</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式系统/">分布式系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/区块链/">区块链</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/密码/">密码</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/持续集成/">持续集成</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/文件存储系统/">文件存储系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/服务网格/">服务网格</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/架构/">架构</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/监控/">监控</a><span class="category-list-count">2</span></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-biao"> 标签</i></div><div class="tagcloud"><a href="/tags/nginx负载均衡/" style="font-size: 15px;">nginx负载均衡</a> <a href="/tags/apidoc/" style="font-size: 15px;">apidoc</a> <a href="/tags/aws云服务器/" style="font-size: 15px;">aws云服务器</a> <a href="/tags/centos-jdk8-install/" style="font-size: 15px;">centos-jdk8-install</a> <a href="/tags/centos登录/" style="font-size: 15px;">centos登录</a> <a href="/tags/mysql-mysql8/" style="font-size: 15px;">mysql mysql8</a> <a href="/tags/concourse/" style="font-size: 15px;">concourse</a> <a href="/tags/api-version-manage-spring-boot中API版本迭代管理/" style="font-size: 15px;">api-version-manage,spring-boot中API版本迭代管理</a> <a href="/tags/cron-grammar/" style="font-size: 15px;">cron-grammar</a> <a href="/tags/snowflake算法/" style="font-size: 15px;">snowflake算法</a> <a href="/tags/centos-docker-install/" style="font-size: 15px;">centos-docker-install</a> <a href="/tags/docker镜像创建、docker容器启动、docker发布web应用/" style="font-size: 15px;">docker镜像创建、docker容器启动、docker发布web应用</a> <a href="/tags/docker-ce安装/" style="font-size: 15px;">docker ce安装</a> <a href="/tags/docker-容器/" style="font-size: 15px;">docker 容器</a> <a href="/tags/docker数据管理/" style="font-size: 15px;">docker数据管理</a> <a href="/tags/基础概念/" style="font-size: 15px;">基础概念</a> <a href="/tags/docker镜像/" style="font-size: 15px;">docker镜像</a> <a href="/tags/docker网络/" style="font-size: 15px;">docker网络</a> <a href="/tags/git-tag/" style="font-size: 15px;">git-tag</a> <a href="/tags/git分支、github分支/" style="font-size: 15px;">git分支、github分支</a> <a href="/tags/git-server-build/" style="font-size: 15px;">git-server-build</a> <a href="/tags/git-install-in-centos/" style="font-size: 15px;">git-install-in-centos</a> <a href="/tags/hashicorp-vault/" style="font-size: 15px;">hashicorp-vault</a> <a href="/tags/http-overview/" style="font-size: 15px;">http-overview</a> <a href="/tags/hibernate-relation/" style="font-size: 15px;">hibernate-relation</a> <a href="/tags/git问题/" style="font-size: 15px;">git问题</a> <a href="/tags/istio/" style="font-size: 15px;">istio</a> <a href="/tags/jackson/" style="font-size: 15px;">jackson</a> <a href="/tags/cglib/" style="font-size: 15px;">cglib</a> <a href="/tags/jvm监控工具/" style="font-size: 15px;">jvm监控工具</a> <a href="/tags/gc垃圾回收/" style="font-size: 15px;">gc垃圾回收</a> <a href="/tags/javapoet-apt-annotation/" style="font-size: 15px;">javapoet-apt-annotation</a> <a href="/tags/k8s/" style="font-size: 15px;">k8s</a> <a href="/tags/jenkins-java-maven/" style="font-size: 15px;">jenkins-java-maven</a> <a href="/tags/linux-command/" style="font-size: 15px;">linux-command</a> <a href="/tags/ubuntu-navicat/" style="font-size: 15px;">ubuntu-navicat</a> <a href="/tags/maven常用功能/" style="font-size: 15px;">maven常用功能</a> <a href="/tags/微服务实践总结/" style="font-size: 15px;">微服务实践总结</a> <a href="/tags/maven-error/" style="font-size: 15px;">maven-error</a> <a href="/tags/mysql建表规范/" style="font-size: 15px;">mysql建表规范</a> <a href="/tags/mysql一主多从配置/" style="font-size: 15px;">mysql一主多从配置</a> <a href="/tags/mysql-expain/" style="font-size: 15px;">mysql-expain</a> <a href="/tags/nginx能做什么/" style="font-size: 15px;">nginx能做什么</a> <a href="/tags/ngrok使用/" style="font-size: 15px;">ngrok使用</a> <a href="/tags/npm使用问题/" style="font-size: 15px;">npm使用问题</a> <a href="/tags/mysql使用问题收藏/" style="font-size: 15px;">mysql使用问题收藏</a> <a href="/tags/pws-push/" style="font-size: 15px;">pws-push</a> <a href="/tags/redis-主从-集群/" style="font-size: 15px;">redis,主从,集群</a> <a href="/tags/redis-密码-安全/" style="font-size: 15px;">redis,密码,安全</a> <a href="/tags/redis命令/" style="font-size: 15px;">redis命令</a> <a href="/tags/redis分布式锁/" style="font-size: 15px;">redis分布式锁</a> <a href="/tags/rabbitmq-install/" style="font-size: 15px;">rabbitmq-install</a> <a href="/tags/redis发布订阅/" style="font-size: 15px;">redis发布订阅</a> <a href="/tags/redis哨兵模式/" style="font-size: 15px;">redis哨兵模式</a> <a href="/tags/redis-install/" style="font-size: 15px;">redis-install</a> <a href="/tags/redmine-mongrel-nginx/" style="font-size: 15px;">redmine-mongrel-nginx</a> <a href="/tags/redmine插件/" style="font-size: 15px;">redmine插件</a> <a href="/tags/rocketmq入门/" style="font-size: 15px;">rocketmq入门</a> <a href="/tags/restful-api/" style="font-size: 15px;">restful-api</a> <a href="/tags/change-contextpath-way/" style="font-size: 15px;">change-contextpath-way</a> <a href="/tags/spring-cloud-配置中心加解密/" style="font-size: 15px;">spring-cloud(配置中心加解密)</a> <a href="/tags/feign使用常见问题/" style="font-size: 15px;">feign使用常见问题</a> <a href="/tags/feign/" style="font-size: 15px;">feign</a> <a href="/tags/hystrix/" style="font-size: 15px;">hystrix</a> <a href="/tags/hystrix-dashboard/" style="font-size: 15px;">hystrix,dashboard</a> <a href="/tags/zuul-exception/" style="font-size: 15px;">zuul-exception</a> <a href="/tags/zuul-filters/" style="font-size: 15px;">zuul-filters</a> <a href="/tags/ELK/" style="font-size: 15px;">ELK</a> <a href="/tags/zuul-start/" style="font-size: 15px;">zuul-start</a> <a href="/tags/spinnaker-start/" style="font-size: 15px;">spinnaker-start</a> <a href="/tags/shadowsocks-go/" style="font-size: 15px;">shadowsocks-go</a> <a href="/tags/spring-cors/" style="font-size: 15px;">spring-cors</a> <a href="/tags/spring-cache/" style="font-size: 15px;">spring cache</a> <a href="/tags/shiro入门/" style="font-size: 15px;">shiro入门</a> <a href="/tags/spring-boot-async/" style="font-size: 15px;">spring-boot-async</a> <a href="/tags/spring-boot-jar/" style="font-size: 15px;">spring-boot-jar</a> <a href="/tags/spring-mvc国际化/" style="font-size: 15px;">spring mvc国际化</a> <a href="/tags/teamcity-start/" style="font-size: 15px;">teamcity-start</a> <a href="/tags/jpa读写分离配置/" style="font-size: 15px;">jpa读写分离配置</a> <a href="/tags/vagrant-start/" style="font-size: 15px;">vagrant-start</a> <a href="/tags/vault/" style="font-size: 15px;">vault</a> <a href="/tags/wkhtmltopdf/" style="font-size: 15px;">wkhtmltopdf</a> <a href="/tags/website-high-performance/" style="font-size: 15px;">website-high-performance</a> <a href="/tags/apache-curator/" style="font-size: 15px;">apache curator</a> <a href="/tags/spring-boot-filter/" style="font-size: 15px;">spring-boot-filter</a> <a href="/tags/后端架构师技术图谱/" style="font-size: 15px;">后端架构师技术图谱</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-archive"> 归档</i></div><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-you"> 友情链接</i></div><ul></ul><a href="http://blog.didispace.com/" title="程序员DD|翟永超的博客" target="_blank">程序员DD|翟永超的博客</a><ul></ul><a href="http://www.bysocket.com/" title="泥瓦匠的博客" target="_blank">泥瓦匠的博客</a><ul></ul><a href="http://itmuch.com/" title="周立|Spring Cloud的博客" target="_blank">周立|Spring Cloud的博客</a><ul></ul><a href="http://itmuch.com/" title="梁桂钊的博客" target="_blank">梁桂钊的博客</a><ul></ul><a href="https://www.cnkirito.moe/" title="徐靖峰|个人博客" target="_blank">徐靖峰|个人博客</a><ul></ul><a href="http://www.ityouknow.com/" title="纯洁的微笑的博客" target="_blank">纯洁的微笑的博客</a><ul></ul><a href="https://crossoverjie.top/" title="crossoverJie blog" target="_blank">crossoverJie blog</a><ul></ul><a href="https://my.oschina.net/u/1859679/blog" title="wier的博客" target="_blank">wier的博客</a><ul></ul><a href="http://www.ictgu.cn/" title="Any-Video" target="_blank">Any-Video</a><ul></ul><a href="https://www.processon.com/" title="在线作图" target="_blank">在线作图</a><ul></ul><a href="http://spring4all.com/" title="spring4all" target="_blank">spring4all</a><ul></ul><a href="https://www.oschina.net/" title="开源中国" target="_blank">开源中国</a><ul></ul><a href="https://www.w3school.com.cn/" title="w3school学习网" target="_blank">w3school学习网</a><ul></ul><a href="https://angular.cn/" title="angular中文教程" target="_blank">angular中文教程</a><ul></ul><a href="http://tutorials.jenkov.com" title="java教程" target="_blank">java教程</a><ul></ul><a href="http://javasampleapproach.com/" title="javasampleapproach-java教程" target="_blank">javasampleapproach-java教程</a><ul></ul><a href="https://www.programcreek.com/" title="programcreek-java教程" target="_blank">programcreek-java教程</a><ul></ul><a href="https://howtodoinjava.com/" title="howtodoinjava" target="_blank">howtodoinjava</a><ul></ul><a href="http://docs.oracle.com/javase/9/docs/api/" title="javadoc(8/9)" target="_blank">javadoc(8/9)</a><ul></ul><a href="https://docs.oracle.com/javase/tutorial/essential/io/" title="java-core/io" target="_blank">java-core/io</a><ul></ul><a href="https://github.com/eugenp/tutorials" title="eugenp/tutorials" target="_blank">eugenp/tutorials</a><ul></ul><a href="http://www.markdown.cn/" title="markdown参考" target="_blank">markdown参考</a><ul></ul><a href="https://www.baeldung.com/" title="spring教程baeldung" target="_blank">spring教程baeldung</a><ul></ul><a href="https://createchance.github.io/" title="java并发编程" target="_blank">java并发编程</a><ul></ul><a href="http://ifeve.com/" title="并发编程" target="_blank">并发编程</a><ul></ul><a href="http://tutorials.jenkov.com/java-io/index.html" title="Java IO Tutorial" target="_blank">Java IO Tutorial</a><ul></ul><a href="http://tutorials.jenkov.com/java-nio/index.html" title="Java NIO Tutorial" target="_blank">Java NIO Tutorial</a><ul></ul><a href="https://tonybai.com/articles/" title="tonybai-golang" target="_blank">tonybai-golang</a></div></div></div></div><a id="totop" href="#top"></a><div id="footer"><div class="footer-info"><p><a href="/baidusitemap.xml">Baidu Site Haritası</a> |  <a href="/atom.xml">订阅</a> |  <a href="/about/">关于</a></p><p>本站总访问量：<i id="busuanzi_container_site_pv"><i id="busuanzi_value_site_pv"></i></i>次</p><p><span> Copyright &copy;<a href="/." rel="nofollow">xinxiamu.</a></span><span> Theme by<a rel="nofollow" target="_blank" href="https://github.com/chaooo/hexo-theme-BlueLake"> BlueLake.</a></span><span> Count by<a href="http://busuanzi.ibruce.info/"> busuanzi.</a></span><span> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a></span></p></div></div></div><script src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="/js/search.json.js?v=2.0.1"></script><script type="text/javascript" src="/js/toctotop.js?v=2.0.1" async></script><script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":["mshare","weixin","tsina","qzone","linkedin","fbook","twi","print","renren","sqq","evernotecn","bdysc","tqq","tqf","bdxc","kaixin001","tieba","douban","bdhome","thx","ibaidu","meilishuo","mogujie","diandian","huaban","duitang","hx","fx","youdao","sdo","qingbiji","people","xinhua","mail","isohu","yaolan","wealink","ty","iguba","h163","copy"],"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{},"image":{"viewList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"]}};with(document)0[(getElementsByTagName('head')[0]||head).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+</script></body></html>

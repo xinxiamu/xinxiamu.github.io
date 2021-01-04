@@ -1,0 +1,482 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="技术博客"><title>docker安装各种常用开发应用软件 | 小木</title><link rel="stylesheet" type="text/css" href="//fonts.proxy.ustclug.org/css?family=Source+Code+Pro"><link rel="stylesheet" type="text/css" href="/css/style.css?v=2.0.1"><link rel="stylesheet" type="text/css" href="/css/highlight.css?v=2.0.1"><link rel="Shortcut Icon" href="/favicon.ico"><link rel="bookmark" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">docker安装各种常用开发应用软件</h1><a id="logo" href="/.">小木</a><p class="description">专注、忍耐、坚定、从容!!! 乌龟快跑……</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div><div id="search-form"><div id="result-mask" class="hide"></div><label><input id="search-key" type="text" autocomplete="off" placeholder="Arama"></label><div id="result-wrap" class="hide"><div id="search-result"></div></div><div class="hide"><template id="search-tpl"><div class="item"><a href="/{path}" title="{title}"><div class="title">{title}</div><div class="time">{date}</div><div class="tags">{tags}</div></a></div></template></div></div></div><div id="layout" class="layout-g"><div class="layout-l"><div class="content_container"><div class="post"><h1 class="post-title">docker安装各种常用开发应用软件</h1><div class="post-meta"><a href="/2018/07/19/docker-app-install/#comments" class="comment-count"></a><p><span class="date">Jul 19, 2018</span><span><a href="/categories/docker/" class="category">docker</a></span><span><i id="busuanzi_container_page_pv"><i id="busuanzi_value_page_pv"></i><i>点击</i></i></span></p></div><div class="post-content"><p>本文记录在docker各种应用程序的安装以及使用……</p>
+<p>docker仓库： <a href="https://hub.docker.com/" target="_blank" rel="noopener">hub repo</a></p>
+<h2 id="安装nginx"><a href="#安装nginx" class="headerlink" title="安装nginx"></a>安装nginx</h2><p>参考：</p>
+<ul>
+<li><a href="https://hub.docker.com/_/nginx" target="_blank" rel="noopener">https://hub.docker.com/_/nginx</a></li>
+</ul>
+<p>1.新建要映射的卷</p>
+<pre><code># mkdir -p /server/data/nginx/{cache,conf,conf.d,html,logs,pid}
+# chown 1000 /server/data/nginx/* -R
+# chmod 755 /server/data/nginx/* -R
+</code></pre><p>查看</p>
+<pre><code>[root@sqjr-client-demo-server1-hn nginx]# pwd
+/server/data/nginx
+[root@sqjr-client-demo-server1-hn nginx]# ls
+cache  conf  conf.d  html  logs  pid    
+</code></pre><p>2.拉取nginx最新镜像</p>
+<pre><code>docker pull nginx
+</code></pre><p>2.配置nginx.conf</p>
+<ul>
+<li>可以从从启动的容器中把该文件拷贝出来。</li>
+</ul>
+<pre><code>$ docker run --name tmp-nginx-container -d nginx
+$ docker cp tmp-nginx-container:/etc/nginx/nginx.conf /server/data/nginx/conf/nginx.conf
+$ docker rm -f tmp-nginx-container
+</code></pre><ul>
+<li>或者进入<code>/server/data/nginx/conf</code>,新建文件<code>touch nginx.conf</code></li>
+</ul>
+<p>然后编辑nginx.conf文件：</p>
+<pre><code>user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  &apos;$remote_addr - $remote_user [$time_local] &quot;$request&quot; &apos;
+                      &apos;$status $body_bytes_sent &quot;$http_referer&quot; &apos;
+                      &apos;&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot;&apos;;
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    server {
+        listen       80;
+        server_name  localhost;
+    charset utf-8;
+
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
+
+        location / {
+            root   /usr/share/nginx/html;
+            #root /server/wwwroot;
+            index  index.html index.htm;
+        }
+
+        #error_page  404              /404.html;
+
+        # redirect server error pages to the static page /50x.html
+        #
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
+
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        #location ~ \.php$ {
+        #    root           html;
+        #    fastcgi_pass   127.0.0.1:9000;
+        #    fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+        #}
+
+        # deny access to .htaccess files, if Apache&apos;s document root
+        # concurs with nginx&apos;s one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+    include /etc/nginx/conf.d/*.conf;
+}
+</code></pre><p>3.新建欢迎页面</p>
+<p>进入目录<code>server/data/nginx/html</code>下，新建文件<code>index.html</code>并随便编写内容测试。</p>
+<p>4.启动nginx容器</p>
+<pre><code>docker run --name nginx -d -p 80:80 -v /server/data/nginx/html:/usr/share/nginx/html:ro -v /server/data/nginx/logs:/var/log/nginx -v /server/data/nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro -v /server/data/nginx/conf.d:/etc/nginx/conf.d -v /server/data/nginx/cache:/var/cache/nginx -v /server/data/nginx/pid:/var/run -d nginx
+</code></pre><p>成功启动后，就可以打开浏览器测试：<a href="http://ip或者http://域名" target="_blank" rel="noopener">http://ip或者http://域名</a></p>
+<p>5.中文乱码问题</p>
+<p>如果发现中文乱码，修改server的配置内容，增加一行：charset utf-8;  </p>
+<pre><code>upstream you.domainName.com {
+   server 127.0.0.1:8081;
+}
+
+server {
+      listen      80;
+      server_name  you.domainName.com;
+      charset utf-8;
+
+      location /examples {
+          return 403;
+        }   
+ }
+</code></pre><p>然后重启nginx。最后，在浏览器上Ctrl+F5，刷新，一切正常！</p>
+<p>6.反向代理失败问题</p>
+<pre><code>upstream abs-demo.xcsqjr.com{
+    ip_hash;
+    server localhost:8084;
+    #server 192.168.0.36:8084;
+    #server 192.168.0.196:8011;
+    #server 192.168.0.197:8011;
+}
+</code></pre><p>这里不成功，包404错误。8084的应用也是跑在docker上的。实际上并不是因为跑在docker上就失败。<br>成功配置：    </p>
+<pre><code>upstream abs-demo.xcsqjr.com{
+        ip_hash;
+        #server localhost:8084;
+        server 192.168.0.36:8084;
+        #server 192.168.0.196:8011;
+        #server 192.168.0.197:8011;
+}
+</code></pre><p>不能用<code>localhost</code>或者<code>127.0.0.1</code>,要用内网ip。查询内网ip，执行命令：<code>ifconfig</code>。</p>
+<h2 id="安装redis"><a href="#安装redis" class="headerlink" title="安装redis"></a>安装redis</h2><p>参考：</p>
+<ul>
+<li><a href="http://www.runoob.com/docker/docker-install-redis.html" target="_blank" rel="noopener">http://www.runoob.com/docker/docker-install-redis.html</a></li>
+</ul>
+<h3 id="使用redis镜像"><a href="#使用redis镜像" class="headerlink" title="使用redis镜像"></a>使用redis镜像</h3><h4 id="不使用自定义配置文件："><a href="#不使用自定义配置文件：" class="headerlink" title="不使用自定义配置文件："></a>不使用自定义配置文件：</h4><pre><code>docker run -p 6379:6379 --name redis-6379 --restart=always -v /server/data/redis-6379/data:/data  -d redis:5.0.3 redis-server --appendonly yes --requirepass &quot;a1234567&quot;
+</code></pre><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">命令说明：</span><br><span class="line">-p 6379:6379 : 将容器的6379端口映射到主机的6379端口</span><br><span class="line">-v /server/data/redis-6379/data:/data : 将主机中/server/data/redis-6379目录下的data挂载到容器的/data</span><br><span class="line">redis-server --appendonly yes : 在容器执行redis-server启动命令，并打开redis持久化配置 </span><br><span class="line">--requirepass &quot;a1234567&quot; : 设置认证密码 </span><br><span class="line">--restart=always ： 随docker启动而启动</span><br></pre></td></tr></table></figure>
+<p>通过客户端连接进入redis-ci：</p>
+<pre><code>[root@sqjr-client-demo-server1-hn ~]# docker exec -it redis-6379 redis-cli -a a1234567
+Warning: Using a password with &apos;-a&apos; or &apos;-u&apos; option on the command line interface may not be safe.
+127.0.0.1:6379&gt; set username zmt
+</code></pre><p>在宿主机查看redis进程：</p>
+<pre><code>[root@sqjr-client-demo-server1-hn ~]# ps -ef|grep redis
+polkitd  29683 29651  0 14:27 ?        00:00:01 redis-server *:6379
+root     29935 29453  0 14:51 pts/1    00:00:00 grep --color=auto redis
+</code></pre><p>只能本机127.0.0.1连接，不能远程连接。默认是保护模式，不允许远程连接。</p>
+<h4 id="使用自定义配置文件（推荐）"><a href="#使用自定义配置文件（推荐）" class="headerlink" title="使用自定义配置文件（推荐）"></a>使用自定义配置文件（推荐）</h4><pre><code>docker run --name redis-6380 -p 6380:6380 --restart=always -v /server/data/redis-6380/data:/data -v /server/data/redis-6380/conf/redis.conf:/usr/local/etc/redis/redis.conf -d redis redis-server  /usr/local/etc/redis/redis.conf --appendonly yes
+</code></pre><p>redis.conf配置文件基本内容，自由添加：</p>
+<pre><code># 指定Redis监听端口，默认端口为6379
+# 如果指定0端口，表示Redis不监听TCP连接
+port 6380
+
+#设置密码
+requirepass a1234567
+
+#### 生产环境要开启保护模式
+# 绑定的主机地址
+# 你可以绑定单一接口，如果没有绑定，所有接口都会监听到来的连接
+# bind 127.0.0.1
+
+#protected-mode yes #关闭，不要保护模式，远程可连接
+
+# 当客户端闲置多长时间后关闭连接，如果指定为0，表示关闭该功能
+timeout 0
+
+#一定要打开，否则无法启动
+#daemonize yes
+
+# 当Redis以守护进程方式运行时，Redis默认会把pid写入/var/run/redis.pid文件，可以通过pidfile指定
+pidfile /var/run/redis.pid
+
+# 指定日志记录级别，Redis总共支持四个级别：debug、verbose、notice、warning，默认为verbose
+# debug (很多信息, 对开发／测试比较有用)
+# verbose (many rarely useful info, but not a mess like the debug level)
+# notice (moderately verbose, what you want in production probably)
+# warning (only very important / critical messages are logged)
+loglevel verbose
+
+# 日志记录方式，默认为标准输出，如果配置为redis为守护进程方式运行，而这里又配置为标准输出，则日志将会发送给/dev/null
+logfile stdout
+
+# 设置数据库的数量，默认数据库为0，可以使用select &lt;dbid&gt;命令在连接上指定数据库id
+# dbid是从0到‘databases’-1的数目
+databases 16
+
+################################ SNAPSHOTTING  #################################
+# 指定在多长时间内，有多少次更新操作，就将数据同步到数据文件，可以多个条件配合
+# Save the DB on disk:
+#
+#   save &lt;seconds&gt; &lt;changes&gt;
+#
+#   Will save the DB if both the given number of seconds and the given
+#   number of write operations against the DB occurred.
+#
+#   满足以下条件将会同步数据:
+#   900秒（15分钟）内有1个更改
+#   300秒（5分钟）内有10个更改
+#   60秒内有10000个更改
+#   Note: 可以把所有“save”行注释掉，这样就取消同步操作了
+
+save 900 1
+save 300 10
+save 60 10000
+
+# 指定存储至本地数据库时是否压缩数据，默认为yes，Redis采用LZF压缩，如果为了节省CPU时间，可以关闭该选项，但会导致数据库文件变的巨大
+rdbcompression yes
+
+# 指定本地数据库文件名，默认值为dump.rdb
+dbfilename dump.rdb         
+</code></pre><p><em>注意</em>:<br>切记注释掉：#daemonize yes 否则无法启动容器<br>重要话说三遍：注释掉#daemonize yes，注释掉#daemonize yes，注释掉#daemonize yes</p>
+<p>配置文件：<a href="/2018/07/19/docker-app-install/redis.conf" title="redis.conf">redis.conf</a></p>
+<h2 id="安装mysql-server"><a href="#安装mysql-server" class="headerlink" title="安装mysql-server"></a>安装mysql-server</h2><p>仓库：<a href="https://hub.docker.com/r/library/mysql/" target="_blank" rel="noopener">https://hub.docker.com/r/library/mysql/</a></p>
+<h4 id="拉取镜像："><a href="#拉取镜像：" class="headerlink" title="拉取镜像："></a>拉取镜像：</h4><pre><code>docker pull mysql:8.0.13  # 8.0.13为标签tag
+</code></pre><h4 id="使用mysql镜像"><a href="#使用mysql镜像" class="headerlink" title="使用mysql镜像"></a>使用mysql镜像</h4><ul>
+<li>自定义配置文件</li>
+</ul>
+<pre><code>docker run -p 3306:3306 --name mymysql -v $PWD/conf:/etc/mysql/conf.d -v $PWD/logs:/logs -v $PWD/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:8.0.13    
+
+------------------------------------
+docker run --name mysql-3910 -p 3910:3910 --restart always --privileged=true -v /server/data/mysql-3910/conf:/etc/mysql/conf.d -v /server/data/mysql-3910/logs:/logs -v /server/data/mysql-3910/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 --default-authentication-plugin=mysql_native_password -d mysql:8.0.13 
+</code></pre><p>my.cnf内容</p>
+<pre><code>[mysqld] 
+port = 3910
+character-set-client-handshake = FALSE 
+character-set-server = utf8mb4 
+collation-server = utf8mb4_unicode_ci
+init_connect=&apos;SET NAMES utf8mb4&apos;
+default_authentication_plugin = mysql_native_password
+# 一下三个配置，解决too manay connection问题。
+max_connections=1000 # 最大连接数，默认100
+wait_timeout = 300 #
+interactive_timeout = 500
+
+[client]
+default-character-set=utf8mb4
+
+[mysql]
+default-character-set=utf8mb4
+</code></pre><p>_注意_:   </p>
+<ul>
+<li>远程连接可能报错误：</li>
+</ul>
+<pre><code>2019-01-03T07:41:43.260661Z 8 [Warning] [MY-010055] [Server] IP address &apos;172.17.0.1&apos; could not be resolved: Name or service not known
+</code></pre><ul>
+<li><p>原因：<br>在网上查了些资料简单点说就是反向解析造成的，具体原因是因为“MYSQL Server在本地内存中维护了一个非本地的Client TCP cache，这个cache中包含了远程Client的登录信息，比如IP地址，hostname等信息。如果Client连接到服务器后，Mysql首先会在本地TCP池中根据IP地址解析客户端的hostname或者反解析，如果解析不到，就会去DNS中进行解析，如果还是解析失败就在error log中写入这样的警告信息。”。 </p>
+</li>
+<li><p>解决办法：<br>在配置文件新增一句<code>skip-name-resolve</code>： </p>
+</li>
+</ul>
+<pre><code>[mysqld] 
+port = 3910
+character-set-client-handshake = FALSE 
+character-set-server = utf8mb4 
+collation-server = utf8mb4_unicode_ci
+init_connect=&apos;SET NAMES utf8mb4&apos;
+default_authentication_plugin = mysql_native_password
+skip-name-resolve
+wait_timeout = 100
+interactive_timeout = 100
+</code></pre><p>然后重启mysql服务再试。</p>
+<p>命令说明：</p>
+<ul>
+<li>-p 3306:3306：将容器的 3306 端口映射到主机的 3306 端口。</li>
+<li>-v -v $PWD/conf:/etc/mysql/conf.d：将主机当前目录下的 conf/my.cnf 挂载到容器的 /etc/mysql/my.cnf。看下面补充内容说明。</li>
+<li>-v $PWD/logs:/logs：将主机当前目录下的 logs 目录挂载到容器的 /logs。</li>
+<li>-v $PWD/data:/var/lib/mysql ：将主机当前目录下的data目录挂载到容器的 /var/lib/mysql 。</li>
+<li>-e MYSQL_ROOT_PASSWORD=123456：初始化 root 用户的密码。</li>
+<li>–default-authentication-plugin=mysql_native_password  加上这个客户端才能登录上。在配置文件加了，命令中可以不加。</li>
+<li>–privileged=true 提升root在docker中的权限，否则只是普通用户</li>
+<li>–restart always：开机启动</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">补充：     </span><br><span class="line">MySQL默认配置文件是 /etc/mysql/my.cnf 文件。如果想要自定义配置，建议向 /etc/mysql/conf.d 目录中创建 .cnf 文件。新建的文件可以任意起名，只要保证后缀名是 cnf 即可。新建的文件中的配置项可以覆盖 /etc/mysql/my.cnf 中的配置项。     </span><br><span class="line">具体操作：   </span><br><span class="line">首先需要创建将要映射到容器中的目录以及.cnf文件，然后再创建容器</span><br><span class="line"></span><br><span class="line">    # pwd</span><br><span class="line">    /opt</span><br><span class="line">    # mkdir -p docker_v/mysql/conf</span><br><span class="line">    # cd docker_v/mysql/conf</span><br><span class="line">    # touch my.cnf</span><br><span class="line">    # docker run -p 3306:3306 --name mysql -v /opt/docker_v/mysql/conf:/etc/mysql/conf.d -e MYSQL_ROOT_PASSWORD=123456 -d imageID</span><br><span class="line">    4ec4f56455ea2d6d7251a05b7f308e314051fdad2c26bf3d0f27a9b0c0a71414</span><br><span class="line">    </span><br><span class="line">-p 3306:3306：将容器的3306端口映射到主机的3306端口</span><br><span class="line">-v /opt/docker_v/mysql/conf:/etc/mysql/conf.d：将主机/opt/docker_v/mysql/conf目录挂载到容器的/etc/mysql/conf.d</span><br><span class="line">-e MYSQL_ROOT_PASSWORD=123456：初始化root用户的密码</span><br><span class="line">-d: 后台运行容器，并返回容器ID</span><br><span class="line">imageID: mysql镜像ID</span><br></pre></td></tr></table></figure>
+<ul>
+<li>不使用conf配置文件</li>
+</ul>
+<p>参考：<a href="https://hub.docker.com/r/library/mysql/" target="_blank" rel="noopener">https://hub.docker.com/r/library/mysql/</a></p>
+<p>创建容器mysql实例，端口为：3306</p>
+<pre><code>docker run --name mysql-3306 -p 3306:3306 -v /server/mysql-3306/logs:/logs -v /server/mysql-3306/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:8.0.13 --port=3306  --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+</code></pre><p>查看配置参数列表：</p>
+<pre><code>docker run -it --rm mysql:tag --verbose --help    
+</code></pre><h4 id="查看容器启动情况"><a href="#查看容器启动情况" class="headerlink" title="查看容器启动情况"></a>查看容器启动情况</h4><pre><code>[root@xr-server ~]# docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                               NAMES
+415c0167fb5a        mysql:8.0.13        &quot;docker-entrypoint.s…&quot;   5 minutes ago       Up 5 minutes        0.0.0.0:3306-&gt;3306/tcp, 33060/tcp   mymysql
+</code></pre><h4 id="进入mysql镜像"><a href="#进入mysql镜像" class="headerlink" title="进入mysql镜像"></a>进入mysql镜像</h4><p>参考容器章节……</p>
+<p><code>docker exec -it 415c0167fb5a /bin/bash 或者 docker exec -it 415c0167fb5a bash</code></p>
+<p><code>415c0167fb5a</code>为容器id</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[root@xr-server ~]# clear</span><br><span class="line">[root@xr-server ~]# docker ps</span><br><span class="line">CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                               NAMES</span><br><span class="line">415c0167fb5a        mysql:8.0.13        &quot;docker-entrypoint.s…&quot;   17 hours ago        Up 6 minutes        0.0.0.0:3306-&gt;3306/tcp, 33060/tcp   mymysql</span><br><span class="line">[root@xr-server ~]# docker exec -it 415c0167fb5a /bin/bash 或者 docker exec -it 415c0167fb5a bash</span><br><span class="line">root@415c0167fb5a:/# ls</span><br><span class="line">bin   docker-entrypoint-initdb.d  home	 logs	opt   run   sys  var</span><br><span class="line">boot  entrypoint.sh		  lib	 media	proc  sbin  tmp</span><br><span class="line">dev   etc			  lib64  mnt	root  srv   usr</span><br><span class="line">root@415c0167fb5a:/#</span><br></pre></td></tr></table></figure>
+<h2 id="安装zabbix"><a href="#安装zabbix" class="headerlink" title="安装zabbix"></a>安装zabbix</h2><h4 id="启动一个mysql服务器实例"><a href="#启动一个mysql服务器实例" class="headerlink" title="启动一个mysql服务器实例"></a>启动一个mysql服务器实例</h4><pre><code>docker run --name zabbix-mysql-server  \
+-e MYSQL_ROOT_PASSWORD=&quot;123456&quot; \
+-e MYSQL_USER=&quot;zabbix&quot; \
+-e MYSQL_PASSWORD=&quot;123456&quot; \
+-e MYSQL_DATABASE=&quot;zabbix&quot; \
+-p 3306:3306  \
+-v /server/dockers/zabbix/mysql/logs:/logs \
+-v /server/dockers/zabbix/mysql/data:/var/lib/mysql \
+-d mysql:5.7 \
+--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+</code></pre><h4 id="启动Zabbix-server实例，并关联这个实例到已创建的MySQL服务器实例"><a href="#启动Zabbix-server实例，并关联这个实例到已创建的MySQL服务器实例" class="headerlink" title="启动Zabbix server实例，并关联这个实例到已创建的MySQL服务器实例"></a>启动Zabbix server实例，并关联这个实例到已创建的MySQL服务器实例</h4><pre><code>docker run  --name zabbix-server-mysql --hostname zabbix-server-mysql \
+--link zabbix-mysql-server:mysql \
+-e DB_SERVER_HOST=&quot;mysql&quot; \
+-e MYSQL_USER=&quot;zabbix&quot; \
+-e MYSQL_DATABASE=&quot;zabbix&quot; \
+-e MYSQL_PASSWORD=&quot;123456&quot; \
+-e MYSQL_ROOT_PASSWORD=&quot;123456&quot; \
+-v /etc/localtime:/etc/localtime:ro \
+-v /server/dockers/zabbix/zabbix-server/alertscripts:/usr/lib/zabbix/alertscripts \
+-v /server/dockers/zabbix/zabbix-server/externalscripts:/usr/lib/zabbix/externalscripts \
+-p 10051:10051 \
+-p 10050:10050 \
+-d zabbix/zabbix-server-mysql:centos-4.0.2
+
+------------------------------ 查看启动日志 ---------------
+docker logs zabbix-server-mysql
+</code></pre><p>_注意_：必须加上属性<code>-e MYSQL_ROOT_PASSWORD=&quot;123456&quot;</code>,否则mysql的<code>zabbix</code>用户没有操作mysql数据库的权限。    </p>
+<blockquote>
+<p><code>--link</code>属性说明：<br>docker run –link可以用来链接2个容器，使得源容器（被链接的容器）和接收容器（主动去链接的容器）之间可以互相通信，并且接收容器可以获取源容器的一些数据，如源容器的环境变量。<br>–link的格式：<br>–link <name or="" id="">:alias<br>其中，name和id是源容器的name和id，alias是源容器在link下的别名。    </name></p>
+</blockquote>
+<h4 id="启动Zabbix-web-接口，并将它与MySQL服务器实例和Zabbix-server实例关联"><a href="#启动Zabbix-web-接口，并将它与MySQL服务器实例和Zabbix-server实例关联" class="headerlink" title="启动Zabbix web 接口，并将它与MySQL服务器实例和Zabbix server实例关联"></a>启动Zabbix web 接口，并将它与MySQL服务器实例和Zabbix server实例关联</h4><pre><code>docker run --name zabbix-web-nginx-mysql --hostname zabbix-web-nginx-mysql \
+--link zabbix-mysql-server:mysql \
+--link zabbix-server-mysql:zabbix-server \
+-e DB_SERVER_HOST=&quot;mysql&quot; \
+-e MYSQL_ROOT_PASSWORD=&quot;123456&quot; \
+-e MYSQL_USER=&quot;zabbix&quot; \
+-e MYSQL_PASSWORD=&quot;123456&quot; \
+-e MYSQL_DATABASE=&quot;zabbix&quot; \
+-e ZBX_SERVER_HOST=&quot;zabbix-server&quot; \
+-e PHP_TZ=&quot;Asia/Shanghai&quot; \
+-p 8083:80 \
+-d zabbix/zabbix-web-nginx-mysql:centos-4.0.2
+
+------------------------------ 查看启动日志 ---------------
+docker logs zabbix-web-nginx-mysql
+</code></pre><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">浏览器访问ip:8083查看</span><br><span class="line">默认登录</span><br><span class="line">username:Admin</span><br><span class="line">password:zabbix</span><br></pre></td></tr></table></figure>
+<p> _注意_ ：生产环境要做数据卷映射。以防止数据丢失。必须加上属性<code>-e MYSQL_ROOT_PASSWORD=&quot;123456&quot;</code>,否则mysql的<code>zabbix</code>用户没有操作mysql数据库的权限。</p>
+<p><em>界面无法选择中文显示的问题</em>：</p>
+<p>打开系统，在用户资料中，可以选择语言，但是无法选择中文。这是由于docker容器没有安装中文字符集，不支持中文。<br>因此，要进入容器，安装中文字符集合： </p>
+<p>查看系统当前字符集： <code># locale</code>；<br>查看系统可用字符集： <code>#locale -a</code>;<br>安装中文字符集：<br><code>yum install kde-l10n-Chinese -y</code><br><code>yum -y -q reinstall glibc-common</code></p>
+<p>修改<code>vim /etc/locale.conf</code>, LANG=zh_CN.UTF-8;</p>
+<p>重新启动容器。再次进入容器，查看系统当前字符集，发现上面修改无效。坑爹……</p>
+<p>那是因为centos默认镜像的 /etc/yum.conf 里面有一句<code>override_install_langs=en_US.utf8</code>，<br>删除这句话，然后重新运行：<code>yum -y -q reinstall glibc-common</code>，再重启容器，查看系统当前字符集，可以看到是中文的了。</p>
+<h4 id="启动zabbix-agent"><a href="#启动zabbix-agent" class="headerlink" title="启动zabbix-agent"></a>启动zabbix-agent</h4><pre><code>docker run --name zabbix-agent --link zabbix-server-mysql:zabbix-server -d zabbix/zabbix-agent:centos-4.0.2 
+</code></pre><p>最后需要在web端将，zabbix-agent添加到zabbix-server的host列表里面。    </p>
+<h4 id="启动Zabbix-Java-gateway实例-并关联到zabbix-server"><a href="#启动Zabbix-Java-gateway实例-并关联到zabbix-server" class="headerlink" title="启动Zabbix Java gateway实例,并关联到zabbix-server"></a>启动Zabbix Java gateway实例,并关联到zabbix-server</h4><p>用于监控jvm/tomcat性能。<br>Zabbix监控Java应用程序的关键点在于：配置Zabbix-JavaGateway、让Zabbix-Server能够连接Zabbix-JavaGateway、Tomcat开启JVM远程监控功能等。</p>
+<pre><code>docker run --name zabbix-java-gateway --link zabbix-server-mysql:zabbix-server -d zabbix/zabbix-java-gateway:latest
+</code></pre><h2 id="安装Jenkins"><a href="#安装Jenkins" class="headerlink" title="安装Jenkins"></a>安装Jenkins</h2><p>####　配置日志：   </p>
+<pre><code>[root@ymu /]# mkdir -p /server/data/jenkins
+[root@ymu /]# cd /server/data/jenkins
+[root@ymu jenkins]# touch log.properties
+[root@ymu jenkins]# cat &gt; log.properties &lt;&lt;EOF
+&gt; handlers=java.util.logging.ConsoleHandler
+&gt; jenkins.level=FINEST
+&gt; java.util.logging.ConsoleHandler.level=FINEST
+&gt; EOF
+</code></pre><h4 id="启动jenkins服务"><a href="#启动jenkins服务" class="headerlink" title="启动jenkins服务"></a>启动jenkins服务</h4><p>参考：<a href="https://github.com/jenkinsci/docker/blob/master/README.md" target="_blank" rel="noopener">https://github.com/jenkinsci/docker/blob/master/README.md</a></p>
+<p>首先，要对文件夹赋予权限：<br>查看文件夹权限：`</p>
+<pre><code>[root@xr-server jenkins]# ls -l /server/data/jenkins/
+total 4
+-rw-r--r--. 1 root root 109 Dec 17 00:55 log.properties
+</code></pre><p>赋予文件夹权限：    </p>
+<pre><code>chown -R 1000:1000 /server/data/jenkins/    
+</code></pre><p>启动容器：</p>
+<pre><code>docker run --name ymu-jenkins -p 3001:8080 -p 50000:50000 --env JAVA_OPTS=&quot;-Djava.util.logging.config.file=/var/jenkins_home/log.properties&quot; -v /server/data/jenkins:/var/jenkins_home -d jenkins/jenkins:lts
+</code></pre><p>lts：长期支持版本<br>以上启动的容器安装Locale插件后，也只能部分中文，原因：未知……</p>
+<p>说明： </p>
+<ul>
+<li>-v 会把容器目录<code>/var/jenkins_home</code>映射到主机<code>/server/data/jenkins</code> </li>
+</ul>
+<h4 id="测试是否安装成功"><a href="#测试是否安装成功" class="headerlink" title="测试是否安装成功"></a>测试是否安装成功</h4><p>打开浏览器输入：local:3001</p>
+<p>如果看到要求获取登录密码的界面，则成功。恭喜……</p>
+<p>获取登录初始密码：   </p>
+<pre><code>[root@ymu secrets]# pwd
+/server/data/jenkins/secrets
+[root@ymu secrets]# cat initialAdminPassword 
+8ccac67d98dd4c77a2c09870e8246e5d
+[root@ymu secrets]#
+</code></pre><p>其它的如和maven的集成等，参考以前文档。  </p>
+<h4 id="使用Nginx做方向代理"><a href="#使用Nginx做方向代理" class="headerlink" title="使用Nginx做方向代理"></a>使用Nginx做方向代理</h4><p>坑，坑，坑……</p>
+<p>一开始按一般的nginx方向代理配置，负载均衡配置，都不行，页面打开异常的慢……</p>
+<p>各种百度，不行。还好，想起了google大神……结果找到了：  </p>
+<p><a href="https://wiki.jenkins.io/display/JENKINS/Running+Jenkins+behind+Nginx" target="_blank" rel="noopener">https://wiki.jenkins.io/display/JENKINS/Running+Jenkins+behind+Nginx</a></p>
+<p>还是官方文档有用，以后遇到这种问题，都先到官方wiki上找答案才对。<br>重新配置：</p>
+<pre><code>upstream jenkins {
+  keepalive 32; # keepalive connections
+  server 127.0.0.1:9000; # jenkins ip and port
+}
+
+server {
+  listen          80;       # Listen on port 80 for IPv4 requests
+
+  server_name     ci.xcsqjr.com;
+
+  #this is the jenkins web root directory (mentioned in the /etc/default/jenkins file)
+  root            /server/data/jenkins/war;
+
+  access_log      /server/java/nginx/logs/ci.xcsqjr.com.access.log;
+  error_log       /server/java/nginx/logs/ci.xcsqjr.com.error.log;
+  ignore_invalid_headers off; #pass through headers from Jenkins which are considered invalid by Nginx server.
+
+  location ~ &quot;^/static/[0-9a-fA-F]{8}\/(.*)$&quot; {
+    #rewrite all static files into requests to the root
+    #E.g /static/12345678/css/something.css will become /css/something.css
+    rewrite &quot;^/static/[0-9a-fA-F]{8}\/(.*)&quot; /$1 last;
+  }
+
+  location /userContent {
+    #have nginx handle all the static requests to the userContent folder files
+    #note : This is the $JENKINS_HOME dir
+    root /server/data/jenkins/war;
+    if (!-f $request_filename){
+      #this file does not exist, might be a directory or a /**view** url
+      rewrite (.*) /$1 last;
+      break;
+    }
+    sendfile on;
+  }
+
+  location / {
+      sendfile off;
+      proxy_pass         http://jenkins;
+      proxy_redirect     default;
+      proxy_http_version 1.1;
+
+      proxy_set_header   Host              $host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_max_temp_file_size 0;
+
+      #this is the maximum upload size
+      client_max_body_size       10m;
+      client_body_buffer_size    128k;
+
+      proxy_connect_timeout      90;
+      proxy_send_timeout         90;
+      proxy_read_timeout         90;
+      proxy_buffering            off;
+      #proxy_request_buffering    off; # Required for HTTP CLI commands in Jenkins &gt; 2.54
+      proxy_set_header Connection &quot;&quot;; # Clear for keepalive
+  }
+
+}
+</code></pre><p>注意：按上面docker安装jenkins的时候，映射了数据卷，所以可以知道：<code>server/data/jenkins/war</code> 为jenkins的web根目录。注意配置好。</p>
+<h2 id="安装gitlab"><a href="#安装gitlab" class="headerlink" title="安装gitlab"></a>安装gitlab</h2><p>参考网址：<a href="https://docs.gitlab.com/omnibus/docker/" target="_blank" rel="noopener">https://docs.gitlab.com/omnibus/docker/</a></p>
+<h2 id="安装sonatype-nexus"><a href="#安装sonatype-nexus" class="headerlink" title="安装sonatype/nexus"></a>安装sonatype/nexus</h2><p>参考网址：<br><a href="https://hub.docker.com/r/sonatype/nexus" target="_blank" rel="noopener">https://hub.docker.com/r/sonatype/nexus</a> </p>
+<p>1.初始持久化数据目录</p>
+<pre><code># mkdir /server/data/nexus/data &amp;&amp; chown -R 200 /server/data/nexus/data
+
+# docker run -d -p 8084:8081 --name nexus -e MAX_HEAP=768m  -v /server/data/nexus/data:/sonatype-work sonatype/nexus    
+</code></pre><p>2.查看启动日志</p>
+<pre><code>docker logs -f nexus
+</code></pre><p>3.默认账号密码：</p>
+<pre><code>admin / admin123        
+</code></pre><p>4.浏览器浏览：</p>
+<pre><code>http://ip:8084/nexus
+</code></pre><h3 id="安装sonatype-nexus3-兼容maven依赖和docker-register（推荐生产使用）"><a href="#安装sonatype-nexus3-兼容maven依赖和docker-register（推荐生产使用）" class="headerlink" title="安装sonatype/nexus3,兼容maven依赖和docker register（推荐生产使用）"></a>安装sonatype/nexus3,兼容maven依赖和docker register（推荐生产使用）</h3><p>网址：<a href="https://github.com/sonatype/docker-nexus3" target="_blank" rel="noopener">https://github.com/sonatype/docker-nexus3</a></p>
+<p>1.创建映射卷并启动实例</p>
+<pre><code># mkdir -p /server/data/nexus3-data &amp;&amp; chown -R 200 /server/data/nexus3-data
+
+# docker run  -p 8085:8081 -p 8082:8082 -p 8083:8083 --name nexus3 --restart=always -v /server/data/nexus3-data:/nexus-data  -d sonatype/nexus3
+</code></pre><p>2.查看启动日志：</p>
+<pre><code>docker logs -f nexus    
+</code></pre><p>3.测试是否安装成功：</p>
+<pre><code>curl -u admin:admin123 http://localhost:8085/service/metrics/ping  
+</code></pre><p>4.打开浏览器浏览：</p>
+<p> 网址：<a href="http://ip:8085" target="_blank" rel="noopener">http://ip:8085</a></p>
+<p> 默认账号密码：admin admin123</p>
+</div><div class="tags"></div><div class="post-share"><div class="bdsharebuttonbox"><span style="float:left;line-height: 28px;height: 28px;font-size:16px;font-weight:blod">分享到：</span><a href="#" data-cmd="more" class="bds_more"></a><a href="#" data-cmd="mshare" title="分享到一键分享" class="bds_mshare"></a><a href="#" data-cmd="fbook" title="分享到Facebook" class="bds_fbook"></a><a href="#" data-cmd="twi" title="分享到Twitter" class="bds_twi"></a><a href="#" data-cmd="linkedin" title="分享到linkedin" class="bds_linkedin"></a><a href="#" data-cmd="youdao" title="分享到有道云笔记" class="bds_youdao"></a><a href="#" data-cmd="evernotecn" title="分享到印象笔记" class="bds_evernotecn"></a><a href="#" data-cmd="weixin" title="分享到微信" class="bds_weixin"></a><a href="#" data-cmd="qzone" title="分享到QQ空间" class="bds_qzone"></a><a href="#" data-cmd="tsina" title="分享到新浪微博" class="bds_tsina"></a></div></div><div class="post-nav"><a href="/2018/07/19/docker-lesson5-dv/" class="pre">docker学习-第五课：数据管理</a><a href="/2018/06/30/docker-lesson4-container/" class="next">docker学习-第四课：容器</a></div><div id="comments"></div></div></div></div><div class="layout-r"><div id="sidebar"><div class="search-pla"></div><div id="toc" class="widget"><div class="widget-title"><i class="fa fa-fei">文章目录</i></div><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#安装nginx"><span class="toc-text">安装nginx</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#安装redis"><span class="toc-text">安装redis</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#使用redis镜像"><span class="toc-text">使用redis镜像</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#不使用自定义配置文件："><span class="toc-text">不使用自定义配置文件：</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#使用自定义配置文件（推荐）"><span class="toc-text">使用自定义配置文件（推荐）</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#安装mysql-server"><span class="toc-text">安装mysql-server</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#拉取镜像："><span class="toc-text">拉取镜像：</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#使用mysql镜像"><span class="toc-text">使用mysql镜像</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#查看容器启动情况"><span class="toc-text">查看容器启动情况</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#进入mysql镜像"><span class="toc-text">进入mysql镜像</span></a></li></ol></li></ol><li class="toc-item toc-level-2"><a class="toc-link" href="#安装zabbix"><span class="toc-text">安装zabbix</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#启动一个mysql服务器实例"><span class="toc-text">启动一个mysql服务器实例</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#启动Zabbix-server实例，并关联这个实例到已创建的MySQL服务器实例"><span class="toc-text">启动Zabbix server实例，并关联这个实例到已创建的MySQL服务器实例</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#启动Zabbix-web-接口，并将它与MySQL服务器实例和Zabbix-server实例关联"><span class="toc-text">启动Zabbix web 接口，并将它与MySQL服务器实例和Zabbix server实例关联</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#启动zabbix-agent"><span class="toc-text">启动zabbix-agent</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#启动Zabbix-Java-gateway实例-并关联到zabbix-server"><span class="toc-text">启动Zabbix Java gateway实例,并关联到zabbix-server</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#安装Jenkins"><span class="toc-text">安装Jenkins</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#启动jenkins服务"><span class="toc-text">启动jenkins服务</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#测试是否安装成功"><span class="toc-text">测试是否安装成功</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#使用Nginx做方向代理"><span class="toc-text">使用Nginx做方向代理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#安装gitlab"><span class="toc-text">安装gitlab</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#安装sonatype-nexus"><span class="toc-text">安装sonatype/nexus</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#安装sonatype-nexus3-兼容maven依赖和docker-register（推荐生产使用）"><span class="toc-text">安装sonatype/nexus3,兼容maven依赖和docker register（推荐生产使用）</span></a></li></ol></li></div><div class="widget"><div class="widget-title"><i class="fa fa-xie"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/ng2-pdfjs-viewer-start/">angular pdf 浏览插件ng2-pdfjs-viewer</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/github-issue/">github使用问题收集</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/mupdf/">MUPDF-一个pdf文件处理利器</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/10/19/kafka-start/">kafka入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/09/02/redmine-docker-install/">docker环境安装redmine</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/07/03/Hugo-Netlify-Forestry/">Hugo + Netlify +Forestry 发布hugo静态网站</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/29/hugo-start/">静态网站生成工具-Hugo</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/28/architecture-c4model/">可视化架构-c4介绍</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/18/minio-start/">分布式文件存储系统 MINIO入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/06/java-jni/">JAVA JNI入门</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-gui"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/CentOs/">CentOs</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kubernetes/">Kubernetes</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Nginx/">Nginx</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Pivotal-Web-Service/">Pivotal Web Service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/TypeScript/">TypeScript</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/angular/">angular</a><span class="category-list-count">8</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/api-manage/">api-manage</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/aws/">aws</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/docker/">docker</a><span class="category-list-count">18</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/flutter/">flutter</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/git/">git</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/github/">github</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/gitlab/">gitlab</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/http协议/">http协议</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/hugo/">hugo</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/idea/">idea</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java/">java</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-io/">java-io</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-jni/">java-jni</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-nio/">java-nio</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/javapoet/">javapoet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jpa-hibernate/">jpa/hibernate</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/json/">json</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jvm/">jvm</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jwt/">jwt</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/kafka/">kafka</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/linux/">linux</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/maven/">maven</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/micro-service/">micro-service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/mysql/">mysql</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/nginx/">nginx</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ngrok/">ngrok</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/npm/">npm</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/pdf/">pdf</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rabbitmq/">rabbitmq</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redmine/">redmine</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rocketmq/">rocketmq</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/security/">security</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/servlet/">servlet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shadowsocks/">shadowsocks</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shiro/">shiro</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-boot/">spring-boot</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-cloud/">spring-cloud</a><span class="category-list-count">11</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/teamcity/">teamcity</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ubuntu/">ubuntu</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/vagrant/">vagrant</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/zookeeper/">zookeeper</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式系统/">分布式系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/区块链/">区块链</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/密码/">密码</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/持续集成/">持续集成</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/文件存储系统/">文件存储系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/服务网格/">服务网格</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/架构/">架构</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/监控/">监控</a><span class="category-list-count">2</span></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-biao"> 标签</i></div><div class="tagcloud"><a href="/tags/nginx负载均衡/" style="font-size: 15px;">nginx负载均衡</a> <a href="/tags/apidoc/" style="font-size: 15px;">apidoc</a> <a href="/tags/aws云服务器/" style="font-size: 15px;">aws云服务器</a> <a href="/tags/centos-jdk8-install/" style="font-size: 15px;">centos-jdk8-install</a> <a href="/tags/centos登录/" style="font-size: 15px;">centos登录</a> <a href="/tags/mysql-mysql8/" style="font-size: 15px;">mysql mysql8</a> <a href="/tags/concourse/" style="font-size: 15px;">concourse</a> <a href="/tags/api-version-manage-spring-boot中API版本迭代管理/" style="font-size: 15px;">api-version-manage,spring-boot中API版本迭代管理</a> <a href="/tags/cron-grammar/" style="font-size: 15px;">cron-grammar</a> <a href="/tags/snowflake算法/" style="font-size: 15px;">snowflake算法</a> <a href="/tags/centos-docker-install/" style="font-size: 15px;">centos-docker-install</a> <a href="/tags/docker镜像创建、docker容器启动、docker发布web应用/" style="font-size: 15px;">docker镜像创建、docker容器启动、docker发布web应用</a> <a href="/tags/docker-ce安装/" style="font-size: 15px;">docker ce安装</a> <a href="/tags/docker-容器/" style="font-size: 15px;">docker 容器</a> <a href="/tags/docker数据管理/" style="font-size: 15px;">docker数据管理</a> <a href="/tags/基础概念/" style="font-size: 15px;">基础概念</a> <a href="/tags/docker镜像/" style="font-size: 15px;">docker镜像</a> <a href="/tags/docker网络/" style="font-size: 15px;">docker网络</a> <a href="/tags/git-tag/" style="font-size: 15px;">git-tag</a> <a href="/tags/git分支、github分支/" style="font-size: 15px;">git分支、github分支</a> <a href="/tags/git-server-build/" style="font-size: 15px;">git-server-build</a> <a href="/tags/git-install-in-centos/" style="font-size: 15px;">git-install-in-centos</a> <a href="/tags/hashicorp-vault/" style="font-size: 15px;">hashicorp-vault</a> <a href="/tags/http-overview/" style="font-size: 15px;">http-overview</a> <a href="/tags/hibernate-relation/" style="font-size: 15px;">hibernate-relation</a> <a href="/tags/git问题/" style="font-size: 15px;">git问题</a> <a href="/tags/istio/" style="font-size: 15px;">istio</a> <a href="/tags/jackson/" style="font-size: 15px;">jackson</a> <a href="/tags/cglib/" style="font-size: 15px;">cglib</a> <a href="/tags/jvm监控工具/" style="font-size: 15px;">jvm监控工具</a> <a href="/tags/gc垃圾回收/" style="font-size: 15px;">gc垃圾回收</a> <a href="/tags/javapoet-apt-annotation/" style="font-size: 15px;">javapoet-apt-annotation</a> <a href="/tags/k8s/" style="font-size: 15px;">k8s</a> <a href="/tags/jenkins-java-maven/" style="font-size: 15px;">jenkins-java-maven</a> <a href="/tags/linux-command/" style="font-size: 15px;">linux-command</a> <a href="/tags/ubuntu-navicat/" style="font-size: 15px;">ubuntu-navicat</a> <a href="/tags/maven常用功能/" style="font-size: 15px;">maven常用功能</a> <a href="/tags/微服务实践总结/" style="font-size: 15px;">微服务实践总结</a> <a href="/tags/maven-error/" style="font-size: 15px;">maven-error</a> <a href="/tags/mysql建表规范/" style="font-size: 15px;">mysql建表规范</a> <a href="/tags/mysql一主多从配置/" style="font-size: 15px;">mysql一主多从配置</a> <a href="/tags/mysql-expain/" style="font-size: 15px;">mysql-expain</a> <a href="/tags/nginx能做什么/" style="font-size: 15px;">nginx能做什么</a> <a href="/tags/ngrok使用/" style="font-size: 15px;">ngrok使用</a> <a href="/tags/npm使用问题/" style="font-size: 15px;">npm使用问题</a> <a href="/tags/mysql使用问题收藏/" style="font-size: 15px;">mysql使用问题收藏</a> <a href="/tags/pws-push/" style="font-size: 15px;">pws-push</a> <a href="/tags/redis-主从-集群/" style="font-size: 15px;">redis,主从,集群</a> <a href="/tags/redis-密码-安全/" style="font-size: 15px;">redis,密码,安全</a> <a href="/tags/redis命令/" style="font-size: 15px;">redis命令</a> <a href="/tags/redis分布式锁/" style="font-size: 15px;">redis分布式锁</a> <a href="/tags/rabbitmq-install/" style="font-size: 15px;">rabbitmq-install</a> <a href="/tags/redis发布订阅/" style="font-size: 15px;">redis发布订阅</a> <a href="/tags/redis哨兵模式/" style="font-size: 15px;">redis哨兵模式</a> <a href="/tags/redis-install/" style="font-size: 15px;">redis-install</a> <a href="/tags/redmine-mongrel-nginx/" style="font-size: 15px;">redmine-mongrel-nginx</a> <a href="/tags/redmine插件/" style="font-size: 15px;">redmine插件</a> <a href="/tags/rocketmq入门/" style="font-size: 15px;">rocketmq入门</a> <a href="/tags/restful-api/" style="font-size: 15px;">restful-api</a> <a href="/tags/change-contextpath-way/" style="font-size: 15px;">change-contextpath-way</a> <a href="/tags/spring-cloud-配置中心加解密/" style="font-size: 15px;">spring-cloud(配置中心加解密)</a> <a href="/tags/feign使用常见问题/" style="font-size: 15px;">feign使用常见问题</a> <a href="/tags/feign/" style="font-size: 15px;">feign</a> <a href="/tags/hystrix/" style="font-size: 15px;">hystrix</a> <a href="/tags/hystrix-dashboard/" style="font-size: 15px;">hystrix,dashboard</a> <a href="/tags/zuul-exception/" style="font-size: 15px;">zuul-exception</a> <a href="/tags/zuul-filters/" style="font-size: 15px;">zuul-filters</a> <a href="/tags/ELK/" style="font-size: 15px;">ELK</a> <a href="/tags/zuul-start/" style="font-size: 15px;">zuul-start</a> <a href="/tags/spinnaker-start/" style="font-size: 15px;">spinnaker-start</a> <a href="/tags/shadowsocks-go/" style="font-size: 15px;">shadowsocks-go</a> <a href="/tags/spring-cors/" style="font-size: 15px;">spring-cors</a> <a href="/tags/spring-cache/" style="font-size: 15px;">spring cache</a> <a href="/tags/shiro入门/" style="font-size: 15px;">shiro入门</a> <a href="/tags/spring-boot-async/" style="font-size: 15px;">spring-boot-async</a> <a href="/tags/spring-boot-jar/" style="font-size: 15px;">spring-boot-jar</a> <a href="/tags/spring-mvc国际化/" style="font-size: 15px;">spring mvc国际化</a> <a href="/tags/teamcity-start/" style="font-size: 15px;">teamcity-start</a> <a href="/tags/jpa读写分离配置/" style="font-size: 15px;">jpa读写分离配置</a> <a href="/tags/vagrant-start/" style="font-size: 15px;">vagrant-start</a> <a href="/tags/vault/" style="font-size: 15px;">vault</a> <a href="/tags/wkhtmltopdf/" style="font-size: 15px;">wkhtmltopdf</a> <a href="/tags/website-high-performance/" style="font-size: 15px;">website-high-performance</a> <a href="/tags/apache-curator/" style="font-size: 15px;">apache curator</a> <a href="/tags/spring-boot-filter/" style="font-size: 15px;">spring-boot-filter</a> <a href="/tags/后端架构师技术图谱/" style="font-size: 15px;">后端架构师技术图谱</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-archive"> 归档</i></div><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-you"> 友情链接</i></div><ul></ul><a href="http://blog.didispace.com/" title="程序员DD|翟永超的博客" target="_blank">程序员DD|翟永超的博客</a><ul></ul><a href="http://www.bysocket.com/" title="泥瓦匠的博客" target="_blank">泥瓦匠的博客</a><ul></ul><a href="http://itmuch.com/" title="周立|Spring Cloud的博客" target="_blank">周立|Spring Cloud的博客</a><ul></ul><a href="http://itmuch.com/" title="梁桂钊的博客" target="_blank">梁桂钊的博客</a><ul></ul><a href="https://www.cnkirito.moe/" title="徐靖峰|个人博客" target="_blank">徐靖峰|个人博客</a><ul></ul><a href="http://www.ityouknow.com/" title="纯洁的微笑的博客" target="_blank">纯洁的微笑的博客</a><ul></ul><a href="https://crossoverjie.top/" title="crossoverJie blog" target="_blank">crossoverJie blog</a><ul></ul><a href="https://my.oschina.net/u/1859679/blog" title="wier的博客" target="_blank">wier的博客</a><ul></ul><a href="http://www.ictgu.cn/" title="Any-Video" target="_blank">Any-Video</a><ul></ul><a href="https://www.processon.com/" title="在线作图" target="_blank">在线作图</a><ul></ul><a href="http://spring4all.com/" title="spring4all" target="_blank">spring4all</a><ul></ul><a href="https://www.oschina.net/" title="开源中国" target="_blank">开源中国</a><ul></ul><a href="https://www.w3school.com.cn/" title="w3school学习网" target="_blank">w3school学习网</a><ul></ul><a href="https://angular.cn/" title="angular中文教程" target="_blank">angular中文教程</a><ul></ul><a href="http://tutorials.jenkov.com" title="java教程" target="_blank">java教程</a><ul></ul><a href="http://javasampleapproach.com/" title="javasampleapproach-java教程" target="_blank">javasampleapproach-java教程</a><ul></ul><a href="https://www.programcreek.com/" title="programcreek-java教程" target="_blank">programcreek-java教程</a><ul></ul><a href="https://howtodoinjava.com/" title="howtodoinjava" target="_blank">howtodoinjava</a><ul></ul><a href="http://docs.oracle.com/javase/9/docs/api/" title="javadoc(8/9)" target="_blank">javadoc(8/9)</a><ul></ul><a href="https://docs.oracle.com/javase/tutorial/essential/io/" title="java-core/io" target="_blank">java-core/io</a><ul></ul><a href="https://github.com/eugenp/tutorials" title="eugenp/tutorials" target="_blank">eugenp/tutorials</a><ul></ul><a href="http://www.markdown.cn/" title="markdown参考" target="_blank">markdown参考</a><ul></ul><a href="https://www.baeldung.com/" title="spring教程baeldung" target="_blank">spring教程baeldung</a><ul></ul><a href="https://createchance.github.io/" title="java并发编程" target="_blank">java并发编程</a><ul></ul><a href="http://ifeve.com/" title="并发编程" target="_blank">并发编程</a><ul></ul><a href="http://tutorials.jenkov.com/java-io/index.html" title="Java IO Tutorial" target="_blank">Java IO Tutorial</a><ul></ul><a href="http://tutorials.jenkov.com/java-nio/index.html" title="Java NIO Tutorial" target="_blank">Java NIO Tutorial</a><ul></ul><a href="https://tonybai.com/articles/" title="tonybai-golang" target="_blank">tonybai-golang</a></div></div></div></div><a id="totop" href="#top"></a><div id="footer"><div class="footer-info"><p><a href="/baidusitemap.xml">Baidu Site Haritası</a> |  <a href="/atom.xml">订阅</a> |  <a href="/about/">关于</a></p><p>本站总访问量：<i id="busuanzi_container_site_pv"><i id="busuanzi_value_site_pv"></i></i>次</p><p><span> Copyright &copy;<a href="/." rel="nofollow">xinxiamu.</a></span><span> Theme by<a rel="nofollow" target="_blank" href="https://github.com/chaooo/hexo-theme-BlueLake"> BlueLake.</a></span><span> Count by<a href="http://busuanzi.ibruce.info/"> busuanzi.</a></span><span> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a></span></p></div></div></div><script src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="/js/search.json.js?v=2.0.1"></script><script type="text/javascript" src="/js/toctotop.js?v=2.0.1" async></script><script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":["mshare","weixin","tsina","qzone","linkedin","fbook","twi","print","renren","sqq","evernotecn","bdysc","tqq","tqf","bdxc","kaixin001","tieba","douban","bdhome","thx","ibaidu","meilishuo","mogujie","diandian","huaban","duitang","hx","fx","youdao","sdo","qingbiji","people","xinhua","mail","isohu","yaolan","wealink","ty","iguba","h163","copy"],"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{},"image":{"viewList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"]}};with(document)0[(getElementsByTagName('head')[0]||head).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+</script></body></html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta name="generator" content="Hexo 3.8.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="技术博客"><title>linux常用命令使用收藏 | 小木</title><link rel="stylesheet" type="text/css" href="//fonts.proxy.ustclug.org/css?family=Source+Code+Pro"><link rel="stylesheet" type="text/css" href="/css/style.css?v=2.0.1"><link rel="stylesheet" type="text/css" href="/css/highlight.css?v=2.0.1"><link rel="Shortcut Icon" href="/favicon.ico"><link rel="bookmark" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">linux常用命令使用收藏</h1><a id="logo" href="/.">小木</a><p class="description">专注、忍耐、坚定、从容!!! 乌龟快跑……</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div><div id="search-form"><div id="result-mask" class="hide"></div><label><input id="search-key" type="text" autocomplete="off" placeholder="Arama"></label><div id="result-wrap" class="hide"><div id="search-result"></div></div><div class="hide"><template id="search-tpl"><div class="item"><a href="/{path}" title="{title}"><div class="title">{title}</div><div class="time">{date}</div><div class="tags">{tags}</div></a></div></template></div></div></div><div id="layout" class="layout-g"><div class="layout-l"><div class="content_container"><div class="post"><h1 class="post-title">linux常用命令使用收藏</h1><div class="post-meta"><a href="/2017/10/14/linux-command-use/#comments" class="comment-count"></a><p><span class="date">Oct 14, 2017</span><span><a href="/categories/linux/" class="category">linux</a></span><span><i id="busuanzi_container_page_pv"><i id="busuanzi_value_page_pv"></i><i>点击</i></i></span></p></div><div class="post-content"><p>收集linux系统实践过程常用的命令。方便查看！</p>
+<h2 id="1-系统用户管理"><a href="#1-系统用户管理" class="headerlink" title="1. 系统用户管理"></a>1. 系统用户管理</h2><h3 id="1-1-查看所有系统用户"><a href="#1-1-查看所有系统用户" class="headerlink" title="1.1. 查看所有系统用户"></a>1.1. 查看所有系统用户</h3><p><code>[root@izwz924c5ufaoooso1wswiz ~]# cat /etc/passwd</code></p>
+<h3 id="1-2-查看系统用户对应的UID"><a href="#1-2-查看系统用户对应的UID" class="headerlink" title="1.2. 查看系统用户对应的UID"></a>1.2. 查看系统用户对应的UID</h3><p><code>[root@izwz924c5ufaoooso1wswiz ~]# cat /etc/group</code></p>
+<h3 id="1-3-添加系统用户"><a href="#1-3-添加系统用户" class="headerlink" title="1.3. 添加系统用户"></a>1.3. 添加系统用户</h3><p><code>&gt; useradd zmt</code>  添加用户zmt<br><code>&gt; passwd zmt</code>   为用户zmt添加密码，输入密码即可</p>
+<h3 id="1-4-删除系统用户"><a href="#1-4-删除系统用户" class="headerlink" title="1.4. 删除系统用户"></a>1.4. 删除系统用户</h3><p><code>&gt; userdel -r xz</code>  加上-r参数，userdel会删除用户的HOME目录以及邮件目录</p>
+<p>_警告_ 在有大量用户的环境中使用-r参数时要特别小心。你永远不知道用户是否在其HOME目<br>录下存放了其他用户或其他程序要使用的重要文件。记住，在删除用户的HOME目录之<br>前一定要检查清楚！</p>
+<h3 id="1-5-修改用户"><a href="#1-5-修改用户" class="headerlink" title="1.5 修改用户"></a>1.5 修改用户</h3><p>表7-3 用户账户修改工具</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">命 令</th>
+<th style="text-align:center">描 述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">usermod</td>
+<td style="text-align:center">修改用户账户的字段，还可以指定主要组以及附加组的所属关系</td>
+</tr>
+<tr>
+<td style="text-align:center">passwd</td>
+<td style="text-align:center">修改已有用户的密码</td>
+</tr>
+<tr>
+<td style="text-align:center">chpasswd</td>
+<td style="text-align:center">从文件中读取登录名密码对，并更新密码</td>
+</tr>
+<tr>
+<td style="text-align:center">chage</td>
+<td style="text-align:center">修改密码的过期日期</td>
+</tr>
+<tr>
+<td style="text-align:center">chfn</td>
+<td style="text-align:center">修改用户账户的备注信息</td>
+</tr>
+<tr>
+<td style="text-align:center">chsh</td>
+<td style="text-align:center">修改用户账户的默认登录shell</td>
+</tr>
+</tbody>
+</table>
+<p><em>1. usermod</em><br>usermod命令是用户账户修改工具中最强大的一个。它能用来修改/etc/passwd文件中的大部分字段，只需用与想修改的字段对应的命令行参数就可以了。参数大部分跟useradd命令的参数一样（比如，-c修改备注字段，-e修改过期日期，-g修改默认的登录组）。除此之外，还有另外一些可能派上用场的选项。</p>
+<blockquote>
+<ul>
+<li>-l修改用户账户的登录名。</li>
+<li>-L锁定账户，使用户无法登录。</li>
+<li>-p修改账户的密码。</li>
+<li>-U解除锁定，使用户能够登录。</li>
+</ul>
+</blockquote>
+<p>-L选项尤其实用。它可以将账户锁定，使用户无法登录，同时无需删除账户和用户的数据。<br>要让账户恢复正常，只要用-U选项就行了。</p>
+<p><em>2. passwd和chpasswd</em><br>改变用户密码的一个简便方法就是用passwd命令。</p>
+<pre><code># passwd test
+Changing password for user test.
+New UNIX password:
+Retype new UNIX password:
+passwd: all authentication tokens updated successfully.
+#
+</code></pre><p>如果只用passwd命令，它会改你自己的密码。系统上的任何用户都能改自己的密码，但只<br>有root用户才有权限改别人的密码。<br><em>-e选项能强制用户下次登录时修改密码。你可以先给用户设置一个简单的密码，之后再强制<br>在下次登录时改成他们能记住的更复杂的密码。</em><br>如果需要为系统中的大量用户修改密码，chpasswd命令可以事半功倍。chpasswd命令能从<br>标准输入自动读取登录名和密码对（由冒号分割）列表，给密码加密，然后为用户账户设置。你<br>也可以用重定向命令来将含有userid:passwd对的文件重定向给该命令。</p>
+<pre><code># chpasswd &lt; users.txt
+#    
+</code></pre><h2 id="2-系统用户组管理"><a href="#2-系统用户组管理" class="headerlink" title="2. 系统用户组管理"></a>2. 系统用户组管理</h2><h3 id="2-1-查看所有用户组"><a href="#2-1-查看所有用户组" class="headerlink" title="2.1 查看所有用户组"></a>2.1 查看所有用户组</h3><blockquote>
+<p><code>&gt; cat /etc/group</code><br>root:x:0:root<br>bin:x:1:root,bin,daemon<br>daemon:x:2:root,bin,daemon<br>sys:x:3:root,bin,adm<br>adm:x:4:root,adm,daemon<br>rich:x:500:<br>mama:x:501:<br>katie:x:502:<br>jessica:x:503:<br>mysql:x:27:<br>test:x:504:</p>
+</blockquote>
+<p>和UID一样，GID在分配时也采用了特定的格式。系统账户用的组通常会分配低于500的GID<br>值，而用户组的GID则会从500开始分配。/etc/group文件有4个字段：</p>
+<ul>
+<li>组名</li>
+<li>组密码</li>
+<li>GID</li>
+<li>属于该组的用户列表</li>
+</ul>
+<h3 id="2-2-创建新组"><a href="#2-2-创建新组" class="headerlink" title="2.2 创建新组"></a>2.2 创建新组</h3><pre><code>[root@izwz924c5ufaoooso1wswiz ~]# groupadd spcs
+[root@izwz924c5ufaoooso1wswiz ~]# tail /etc/group
+mysql:x:1000:
+cgred:x:994:
+docker:x:993:
+nexus:x:1001:
+git:x:1002:
+elsearch:x:1003:
+epmd:x:992:
+rabbitmq:x:991:
+zmt:x:1004:
+spcs:x:1005:
+</code></pre><p><em>为spcs组添加成员</em><br><code>[root@izwz924c5ufaoooso1wswiz ~]# usermod -G spcs zmt</code><br><code>[root@izwz924c5ufaoooso1wswiz ~]# usermod -G spcs git</code><br>两个系统用户zmt、git将添加到用户组spcs。</p>
+<p>_说明_ 如果更改了已登录系统账户所属的用户组，该用户必须登出系统后再登录，组关系的更<br>改才能生效。</p>
+<h3 id="2-3-修改组"><a href="#2-3-修改组" class="headerlink" title="2.3 修改组"></a>2.3 修改组</h3><p>在/etc/group文件中可以看到，需要修改的组信息并不多。groupmod命令可以修改已有组的<br>GID（加-g选项）或组名（加-n选项）。</p>
+<ol>
+<li><p>修改组名</p>
+<pre><code># /usr/sbin/groupmod -n spcs spcselling
+# tail /etc/group
+haldaemon:x:68:
+xfs:x:43:
+gdm:x:42:
+rich:x:500:
+mama:x:501:
+katie:x:502:
+jessica:x:503:
+mysql:x:27:
+test:x:504:
+sharing:x:505:test,rich
+#
+</code></pre></li>
+</ol>
+<p>修改组名时，GID和组成员不会变，只有组名改变。由于所有的安全权限都是基于GID的，<br>你可以随意改变组名而不会影响文件的安全性。</p>
+<h2 id="3-文件权限管理"><a href="#3-文件权限管理" class="headerlink" title="3. 文件权限管理"></a>3. 文件权限管理</h2><h2 id="4-开机启动命令-chkconfig"><a href="#4-开机启动命令-chkconfig" class="headerlink" title="4. 开机启动命令-chkconfig"></a>4. 开机启动命令-chkconfig</h2><h2 id="5-文档操作"><a href="#5-文档操作" class="headerlink" title="5. 文档操作"></a>5. 文档操作</h2><h3 id="5-1-复制文件-cp命令使用"><a href="#5-1-复制文件-cp命令使用" class="headerlink" title="5.1 复制文件-cp命令使用"></a>5.1 复制文件-cp命令使用</h3><ol>
+<li><p>文件到文件复制</p>
+<blockquote>
+<p>将文档a复制成b（相当于备份并改名）。<br>cp -i a b<br>或，<br>cp a b</p>
+</blockquote>
+</li>
+<li><p>文件到目录复制</p>
+<blockquote>
+<p>将文档 file1复制到dir1目录下，复制后名称仍未file1<br>cp -i file1 dir1<br>或，<br>cp file1 dir1</p>
+</blockquote>
+</li>
+<li><p>目录到目录复制</p>
+<blockquote>
+<p>将目录dir1复制到dir2目录下，复制结果目录被改名为dir2<br>cp -r dir1 dir2<br>将目录dir1下所有文件包括文件夹，都复制到dir2目录下<br>cp -r dir1/<em>.</em> dir2<br>常见错误：<br>1、提示cp: omitting directory错误<br>复制目录时，使用-r选项即可递归拷贝，如下：<br>cp -r dir1 dir2</p>
+</blockquote>
+</li>
+</ol>
+<h2 id="6-解压-压缩"><a href="#6-解压-压缩" class="headerlink" title="6. 解压/压缩"></a>6. 解压/压缩</h2><h3 id="6-1-压缩"><a href="#6-1-压缩" class="headerlink" title="6.1 压缩"></a>6.1 压缩</h3><blockquote>
+<p>压缩<br>  tar –cvf jpg.tar <em>.jpg //将目录里所有jpg文件打包成tar.jpg<br>  tar –czf jpg.tar.gz </em>.jpg   //将目录里所有jpg文件打包成jpg.tar后，并且将其用gzip压缩，生成一个gzip压缩过的包，命名为jpg.tar.gz<br>  tar –cjf jpg.tar.bz2 <em>.jpg //将目录里所有jpg文件打包成jpg.tar后，并且将其用bzip2压缩，生成一个bzip2压缩过的包，命名为jpg.tar.bz2<br>  tar –cZf jpg.tar.Z </em>.jpg   //将目录里所有jpg文件打包成jpg.tar后，并且将其用compress压缩，生成一个umcompress压缩过的包，命名为jpg.tar.Z<br>  rar a jpg.rar <em>.jpg //rar格式的压缩，需要先下载rar for linux<br>  zip jpg.zip </em>.jpg //zip格式的压缩，需要先下载zip for linux</p>
+</blockquote>
+<h3 id="6-2-解压"><a href="#6-2-解压" class="headerlink" title="6.2 解压"></a>6.2 解压</h3><blockquote>
+<p>解压<br>  tar –xvf file.tar //解压 tar包<br>  tar -xzvf file.tar.gz //解压tar.gz<br>  tar -xjvf file.tar.bz2   //解压 tar.bz2<br>  tar –xZvf file.tar.Z   //解压tar.Z<br>  unrar e file.rar //解压rar<br>  unzip file.zip //解压zip</p>
+</blockquote>
+<h3 id="6-3-ubuntu-下rar解压工具安装方法："><a href="#6-3-ubuntu-下rar解压工具安装方法：" class="headerlink" title="6.3 ubuntu 下rar解压工具安装方法："></a>6.3 ubuntu 下rar解压工具安装方法：</h3><blockquote>
+<p>1、压缩功能<br> 安装 sudo apt-get install rar<br> 卸载 sudo apt-get remove rar<br> 2、解压功能<br> 安装 sudo apt-get install unrar<br> 卸载 sudo apt-get remove unrar<br> 压缩解压缩.rar<br> 解压：rar x FileName.rar<br> 压缩：rar a FileName.rar DirName  </p>
+</blockquote>
+<h3 id="6-4-总结"><a href="#6-4-总结" class="headerlink" title="6.4 总结"></a>6.4 总结</h3><blockquote>
+<p>1、<code>*.tar</code> 用 tar –xvf 解压<br>  2、<code>*.gz</code> 用 gzip -d或者gunzip 解压<br>  3、<code>*.tar.gz</code>和<code>*.tgz</code> 用 tar –xzf 解压<br>  4、<code>*.bz2</code> 用 bzip2 -d或者用bunzip2 解压<br>  5、<code>*.tar.bz2</code>用tar –xjf 解压<br>  6、<code>*.Z</code> 用 uncompress 解压<br>  7、<code>*.tar.Z</code> 用tar –xZf 解压<br>  8、<code>*.rar</code> 用 unrar e解压<br>  9、<code>*.zip</code> 用 unzip 解压    </p>
+</blockquote>
+<h2 id="配置环境变量"><a href="#配置环境变量" class="headerlink" title="配置环境变量"></a>配置环境变量</h2><p>例子： </p>
+<pre><code>########  JAVA_HOME #######
+JAVA_HOME=/server/java/jdk
+export JAVA_HOME
+PATH=$JAVA_HOME/bin:$JAVA_HOME/include:$JAVA_HOME/include/linux:$PATH
+export PATH
+CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+export CLASSPATH
+
+
+########  MySQL #######
+MYSQL_HOME=/server/databases/mysql-3810
+export MYSQL_HOME
+PATH=$MYSQL_HOME/bin:$PATH
+export PATH
+</code></pre><h2 id="SELinux-使用"><a href="#SELinux-使用" class="headerlink" title="SELinux 使用"></a>SELinux 使用</h2><p><a href="https://blog.csdn.net/yanjun821126/article/details/80828908" target="_blank" rel="noopener">https://blog.csdn.net/yanjun821126/article/details/80828908</a>     </p>
+<h4 id="selinux-开启和关闭"><a href="#selinux-开启和关闭" class="headerlink" title="selinux 开启和关闭"></a>selinux 开启和关闭</h4><p>1.查看开启状态</p>
+<pre><code>/usr/sbin/sestatus -v      ##如果SELinux status参数为enabled即为开启状态   
+
+-------------------------------
+
+[root@xr-server selinux]# /usr/sbin/sestatus -v 
+SELinux status:                 enabled
+SELinuxfs mount:                /sys/fs/selinux
+SELinux root directory:         /etc/selinux
+Loaded policy name:             targeted
+Current mode:                   enforcing
+Mode from config file:          enforcing
+Policy MLS status:              enabled
+Policy deny_unknown status:     allowed
+Max kernel policy version:      31
+
+Process contexts:
+Current context:                unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023
+Init context:                   system_u:system_r:init_t:s0
+/usr/sbin/sshd                  system_u:system_r:sshd_t:s0-s0:c0.c1023
+
+File contexts:
+Controlling terminal:           unconfined_u:object_r:user_devpts_t:s0
+/etc/passwd                     system_u:object_r:passwd_file_t:s0
+/etc/shadow                     system_u:object_r:shadow_t:s0
+/bin/bash                       system_u:object_r:shell_exec_t:s0
+/bin/login                      system_u:object_r:login_exec_t:s0
+/bin/sh                         system_u:object_r:bin_t:s0 -&gt; system_u:object_r:shell_exec_t:s0
+/sbin/agetty                    system_u:object_r:getty_exec_t:s0
+/sbin/init                      system_u:object_r:bin_t:s0 -&gt; system_u:object_r:init_exec_t:s0
+/usr/sbin/sshd                  system_u:object_r:sshd_exec_t:s0
+</code></pre><p>也可以用下面命令查看：</p>
+<pre><code>[root@xr-server selinux]# getenforce 
+Enforcing
+</code></pre><h4 id="关闭"><a href="#关闭" class="headerlink" title="关闭"></a>关闭</h4><p>1.临时关闭（不需要重启系统）</p>
+<pre><code>setenforce 0  ##设置SELinux 成为permissive模式
+
+-----------------------------------------------------
+setenforce 1  ##设置SELinux 成为enforcing模式（开启）
+</code></pre><p>2.修改配置文件关闭（需要重启系统）</p>
+<p>修改/etc/selinux/config 文件</p>
+<p>将SELINUX=enforcing改为SELINUX=disabled</p>
+<p>然后重启系统即可。</p>
+<h2 id="免密码切换到root用户"><a href="#免密码切换到root用户" class="headerlink" title="免密码切换到root用户"></a>免密码切换到root用户</h2><p> Linux下普通用户切换到root用户下，默认情况是需要输入密码，这在自动化脚本里面很不方便，因此需要实现普通用户免密切换到root用户。</p>
+<p>解决方案：</p>
+<ul>
+<li>以root用户登录shell终端，执行vim /etc/sudoers命令，找到如下图所示位置：   </li>
+</ul>
+<ul>
+<li><p>在下方添加一行类似的数据，例如用户名称为elk,则添加内容为：</p>
+<pre><code>## Allow root to run any commands anywhere 
+root    ALL=(ALL)     ALL
+vagrant    ALL=(ALL)       ALL
+</code></pre></li>
+</ul>
+<p>vagrant是用户名。在vagrant下，执行sudo -s就可以直接切换到root了。其它的账号类似。</p>
+<ul>
+<li>保存之后，在普通用户下输入sudo -s命令就可以直接免密切换到root账户了。       </li>
+</ul>
+</div><div class="tags"><a href="/tags/linux-command/">linux-command</a></div><div class="post-share"><div class="bdsharebuttonbox"><span style="float:left;line-height: 28px;height: 28px;font-size:16px;font-weight:blod">分享到：</span><a href="#" data-cmd="more" class="bds_more"></a><a href="#" data-cmd="mshare" title="分享到一键分享" class="bds_mshare"></a><a href="#" data-cmd="fbook" title="分享到Facebook" class="bds_fbook"></a><a href="#" data-cmd="twi" title="分享到Twitter" class="bds_twi"></a><a href="#" data-cmd="linkedin" title="分享到linkedin" class="bds_linkedin"></a><a href="#" data-cmd="youdao" title="分享到有道云笔记" class="bds_youdao"></a><a href="#" data-cmd="evernotecn" title="分享到印象笔记" class="bds_evernotecn"></a><a href="#" data-cmd="weixin" title="分享到微信" class="bds_weixin"></a><a href="#" data-cmd="qzone" title="分享到QQ空间" class="bds_qzone"></a><a href="#" data-cmd="tsina" title="分享到新浪微博" class="bds_tsina"></a></div></div><div class="post-nav"><a href="/2017/10/17/http-protocol-overview/" class="pre">http协议概述(学习笔记)</a><a href="/2017/10/14/git-install-in-centos7/" class="next">git在centos7下源码编译安装</a></div><div id="comments"></div></div></div></div><div class="layout-r"><div id="sidebar"><div class="search-pla"></div><div id="toc" class="widget"><div class="widget-title"><i class="fa fa-fei">文章目录</i></div><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-系统用户管理"><span class="toc-text">1. 系统用户管理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-查看所有系统用户"><span class="toc-text">1.1. 查看所有系统用户</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-查看系统用户对应的UID"><span class="toc-text">1.2. 查看系统用户对应的UID</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3-添加系统用户"><span class="toc-text">1.3. 添加系统用户</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4-删除系统用户"><span class="toc-text">1.4. 删除系统用户</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-5-修改用户"><span class="toc-text">1.5 修改用户</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-系统用户组管理"><span class="toc-text">2. 系统用户组管理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-查看所有用户组"><span class="toc-text">2.1 查看所有用户组</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-创建新组"><span class="toc-text">2.2 创建新组</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-修改组"><span class="toc-text">2.3 修改组</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-文件权限管理"><span class="toc-text">3. 文件权限管理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-开机启动命令-chkconfig"><span class="toc-text">4. 开机启动命令-chkconfig</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-文档操作"><span class="toc-text">5. 文档操作</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-复制文件-cp命令使用"><span class="toc-text">5.1 复制文件-cp命令使用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-解压-压缩"><span class="toc-text">6. 解压/压缩</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-压缩"><span class="toc-text">6.1 压缩</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-解压"><span class="toc-text">6.2 解压</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-ubuntu-下rar解压工具安装方法："><span class="toc-text">6.3 ubuntu 下rar解压工具安装方法：</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4-总结"><span class="toc-text">6.4 总结</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#配置环境变量"><span class="toc-text">配置环境变量</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SELinux-使用"><span class="toc-text">SELinux 使用</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#selinux-开启和关闭"><span class="toc-text">selinux 开启和关闭</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#关闭"><span class="toc-text">关闭</span></a></li></ol></li></ol><li class="toc-item toc-level-2"><a class="toc-link" href="#免密码切换到root用户"><span class="toc-text">免密码切换到root用户</span></a></li></div><div class="widget"><div class="widget-title"><i class="fa fa-xie"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/ng2-pdfjs-viewer-start/">angular pdf 浏览插件ng2-pdfjs-viewer</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/github-issue/">github使用问题收集</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/28/mupdf/">MUPDF-一个pdf文件处理利器</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/10/19/kafka-start/">kafka入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/09/02/redmine-docker-install/">docker环境安装redmine</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/07/03/Hugo-Netlify-Forestry/">Hugo + Netlify +Forestry 发布hugo静态网站</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/29/hugo-start/">静态网站生成工具-Hugo</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/28/architecture-c4model/">可视化架构-c4介绍</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/18/minio-start/">分布式文件存储系统 MINIO入门</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/06/06/java-jni/">JAVA JNI入门</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-gui"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/CentOs/">CentOs</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kubernetes/">Kubernetes</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Nginx/">Nginx</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Pivotal-Web-Service/">Pivotal Web Service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/TypeScript/">TypeScript</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/angular/">angular</a><span class="category-list-count">8</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/api-manage/">api-manage</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/aws/">aws</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/docker/">docker</a><span class="category-list-count">18</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/flutter/">flutter</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/git/">git</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/github/">github</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/gitlab/">gitlab</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/http协议/">http协议</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/hugo/">hugo</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/idea/">idea</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java/">java</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-io/">java-io</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-jni/">java-jni</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/java-nio/">java-nio</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/javapoet/">javapoet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jpa-hibernate/">jpa/hibernate</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/json/">json</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jvm/">jvm</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/jwt/">jwt</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/kafka/">kafka</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/linux/">linux</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/maven/">maven</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/micro-service/">micro-service</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/mysql/">mysql</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/nginx/">nginx</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ngrok/">ngrok</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/npm/">npm</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/pdf/">pdf</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rabbitmq/">rabbitmq</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/redmine/">redmine</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/rocketmq/">rocketmq</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/security/">security</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/servlet/">servlet</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shadowsocks/">shadowsocks</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/shiro/">shiro</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-boot/">spring-boot</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring-cloud/">spring-cloud</a><span class="category-list-count">11</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/teamcity/">teamcity</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/ubuntu/">ubuntu</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/vagrant/">vagrant</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/zookeeper/">zookeeper</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/分布式系统/">分布式系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/区块链/">区块链</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/密码/">密码</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/持续集成/">持续集成</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/文件存储系统/">文件存储系统</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/服务网格/">服务网格</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/架构/">架构</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/监控/">监控</a><span class="category-list-count">2</span></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-biao"> 标签</i></div><div class="tagcloud"><a href="/tags/nginx负载均衡/" style="font-size: 15px;">nginx负载均衡</a> <a href="/tags/apidoc/" style="font-size: 15px;">apidoc</a> <a href="/tags/aws云服务器/" style="font-size: 15px;">aws云服务器</a> <a href="/tags/centos-jdk8-install/" style="font-size: 15px;">centos-jdk8-install</a> <a href="/tags/centos登录/" style="font-size: 15px;">centos登录</a> <a href="/tags/mysql-mysql8/" style="font-size: 15px;">mysql mysql8</a> <a href="/tags/concourse/" style="font-size: 15px;">concourse</a> <a href="/tags/api-version-manage-spring-boot中API版本迭代管理/" style="font-size: 15px;">api-version-manage,spring-boot中API版本迭代管理</a> <a href="/tags/cron-grammar/" style="font-size: 15px;">cron-grammar</a> <a href="/tags/snowflake算法/" style="font-size: 15px;">snowflake算法</a> <a href="/tags/centos-docker-install/" style="font-size: 15px;">centos-docker-install</a> <a href="/tags/docker镜像创建、docker容器启动、docker发布web应用/" style="font-size: 15px;">docker镜像创建、docker容器启动、docker发布web应用</a> <a href="/tags/docker-ce安装/" style="font-size: 15px;">docker ce安装</a> <a href="/tags/docker-容器/" style="font-size: 15px;">docker 容器</a> <a href="/tags/docker数据管理/" style="font-size: 15px;">docker数据管理</a> <a href="/tags/基础概念/" style="font-size: 15px;">基础概念</a> <a href="/tags/docker镜像/" style="font-size: 15px;">docker镜像</a> <a href="/tags/docker网络/" style="font-size: 15px;">docker网络</a> <a href="/tags/git-tag/" style="font-size: 15px;">git-tag</a> <a href="/tags/git分支、github分支/" style="font-size: 15px;">git分支、github分支</a> <a href="/tags/git-server-build/" style="font-size: 15px;">git-server-build</a> <a href="/tags/git-install-in-centos/" style="font-size: 15px;">git-install-in-centos</a> <a href="/tags/hashicorp-vault/" style="font-size: 15px;">hashicorp-vault</a> <a href="/tags/http-overview/" style="font-size: 15px;">http-overview</a> <a href="/tags/hibernate-relation/" style="font-size: 15px;">hibernate-relation</a> <a href="/tags/git问题/" style="font-size: 15px;">git问题</a> <a href="/tags/istio/" style="font-size: 15px;">istio</a> <a href="/tags/jackson/" style="font-size: 15px;">jackson</a> <a href="/tags/cglib/" style="font-size: 15px;">cglib</a> <a href="/tags/jvm监控工具/" style="font-size: 15px;">jvm监控工具</a> <a href="/tags/gc垃圾回收/" style="font-size: 15px;">gc垃圾回收</a> <a href="/tags/javapoet-apt-annotation/" style="font-size: 15px;">javapoet-apt-annotation</a> <a href="/tags/k8s/" style="font-size: 15px;">k8s</a> <a href="/tags/jenkins-java-maven/" style="font-size: 15px;">jenkins-java-maven</a> <a href="/tags/linux-command/" style="font-size: 15px;">linux-command</a> <a href="/tags/ubuntu-navicat/" style="font-size: 15px;">ubuntu-navicat</a> <a href="/tags/maven常用功能/" style="font-size: 15px;">maven常用功能</a> <a href="/tags/微服务实践总结/" style="font-size: 15px;">微服务实践总结</a> <a href="/tags/maven-error/" style="font-size: 15px;">maven-error</a> <a href="/tags/mysql建表规范/" style="font-size: 15px;">mysql建表规范</a> <a href="/tags/mysql一主多从配置/" style="font-size: 15px;">mysql一主多从配置</a> <a href="/tags/mysql-expain/" style="font-size: 15px;">mysql-expain</a> <a href="/tags/nginx能做什么/" style="font-size: 15px;">nginx能做什么</a> <a href="/tags/ngrok使用/" style="font-size: 15px;">ngrok使用</a> <a href="/tags/npm使用问题/" style="font-size: 15px;">npm使用问题</a> <a href="/tags/mysql使用问题收藏/" style="font-size: 15px;">mysql使用问题收藏</a> <a href="/tags/pws-push/" style="font-size: 15px;">pws-push</a> <a href="/tags/redis-主从-集群/" style="font-size: 15px;">redis,主从,集群</a> <a href="/tags/redis-密码-安全/" style="font-size: 15px;">redis,密码,安全</a> <a href="/tags/redis命令/" style="font-size: 15px;">redis命令</a> <a href="/tags/redis分布式锁/" style="font-size: 15px;">redis分布式锁</a> <a href="/tags/rabbitmq-install/" style="font-size: 15px;">rabbitmq-install</a> <a href="/tags/redis发布订阅/" style="font-size: 15px;">redis发布订阅</a> <a href="/tags/redis哨兵模式/" style="font-size: 15px;">redis哨兵模式</a> <a href="/tags/redis-install/" style="font-size: 15px;">redis-install</a> <a href="/tags/redmine-mongrel-nginx/" style="font-size: 15px;">redmine-mongrel-nginx</a> <a href="/tags/redmine插件/" style="font-size: 15px;">redmine插件</a> <a href="/tags/rocketmq入门/" style="font-size: 15px;">rocketmq入门</a> <a href="/tags/restful-api/" style="font-size: 15px;">restful-api</a> <a href="/tags/change-contextpath-way/" style="font-size: 15px;">change-contextpath-way</a> <a href="/tags/spring-cloud-配置中心加解密/" style="font-size: 15px;">spring-cloud(配置中心加解密)</a> <a href="/tags/feign使用常见问题/" style="font-size: 15px;">feign使用常见问题</a> <a href="/tags/feign/" style="font-size: 15px;">feign</a> <a href="/tags/hystrix/" style="font-size: 15px;">hystrix</a> <a href="/tags/hystrix-dashboard/" style="font-size: 15px;">hystrix,dashboard</a> <a href="/tags/zuul-exception/" style="font-size: 15px;">zuul-exception</a> <a href="/tags/zuul-filters/" style="font-size: 15px;">zuul-filters</a> <a href="/tags/ELK/" style="font-size: 15px;">ELK</a> <a href="/tags/zuul-start/" style="font-size: 15px;">zuul-start</a> <a href="/tags/spinnaker-start/" style="font-size: 15px;">spinnaker-start</a> <a href="/tags/shadowsocks-go/" style="font-size: 15px;">shadowsocks-go</a> <a href="/tags/spring-cors/" style="font-size: 15px;">spring-cors</a> <a href="/tags/spring-cache/" style="font-size: 15px;">spring cache</a> <a href="/tags/shiro入门/" style="font-size: 15px;">shiro入门</a> <a href="/tags/spring-boot-async/" style="font-size: 15px;">spring-boot-async</a> <a href="/tags/spring-boot-jar/" style="font-size: 15px;">spring-boot-jar</a> <a href="/tags/spring-mvc国际化/" style="font-size: 15px;">spring mvc国际化</a> <a href="/tags/teamcity-start/" style="font-size: 15px;">teamcity-start</a> <a href="/tags/jpa读写分离配置/" style="font-size: 15px;">jpa读写分离配置</a> <a href="/tags/vagrant-start/" style="font-size: 15px;">vagrant-start</a> <a href="/tags/vault/" style="font-size: 15px;">vault</a> <a href="/tags/wkhtmltopdf/" style="font-size: 15px;">wkhtmltopdf</a> <a href="/tags/website-high-performance/" style="font-size: 15px;">website-high-performance</a> <a href="/tags/apache-curator/" style="font-size: 15px;">apache curator</a> <a href="/tags/spring-boot-filter/" style="font-size: 15px;">spring-boot-filter</a> <a href="/tags/后端架构师技术图谱/" style="font-size: 15px;">后端架构师技术图谱</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-archive"> 归档</i></div><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">十二月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/10/">十月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/07/">七月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">六月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">五月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">四月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/12/">十二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/11/">十一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">十月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/09/">九月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/08/">八月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/05/">五月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">三月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/02/">二月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">十一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/10/">十月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/09/">九月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">五月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-you"> 友情链接</i></div><ul></ul><a href="http://blog.didispace.com/" title="程序员DD|翟永超的博客" target="_blank">程序员DD|翟永超的博客</a><ul></ul><a href="http://www.bysocket.com/" title="泥瓦匠的博客" target="_blank">泥瓦匠的博客</a><ul></ul><a href="http://itmuch.com/" title="周立|Spring Cloud的博客" target="_blank">周立|Spring Cloud的博客</a><ul></ul><a href="http://itmuch.com/" title="梁桂钊的博客" target="_blank">梁桂钊的博客</a><ul></ul><a href="https://www.cnkirito.moe/" title="徐靖峰|个人博客" target="_blank">徐靖峰|个人博客</a><ul></ul><a href="http://www.ityouknow.com/" title="纯洁的微笑的博客" target="_blank">纯洁的微笑的博客</a><ul></ul><a href="https://crossoverjie.top/" title="crossoverJie blog" target="_blank">crossoverJie blog</a><ul></ul><a href="https://my.oschina.net/u/1859679/blog" title="wier的博客" target="_blank">wier的博客</a><ul></ul><a href="http://www.ictgu.cn/" title="Any-Video" target="_blank">Any-Video</a><ul></ul><a href="https://www.processon.com/" title="在线作图" target="_blank">在线作图</a><ul></ul><a href="http://spring4all.com/" title="spring4all" target="_blank">spring4all</a><ul></ul><a href="https://www.oschina.net/" title="开源中国" target="_blank">开源中国</a><ul></ul><a href="https://www.w3school.com.cn/" title="w3school学习网" target="_blank">w3school学习网</a><ul></ul><a href="https://angular.cn/" title="angular中文教程" target="_blank">angular中文教程</a><ul></ul><a href="http://tutorials.jenkov.com" title="java教程" target="_blank">java教程</a><ul></ul><a href="http://javasampleapproach.com/" title="javasampleapproach-java教程" target="_blank">javasampleapproach-java教程</a><ul></ul><a href="https://www.programcreek.com/" title="programcreek-java教程" target="_blank">programcreek-java教程</a><ul></ul><a href="https://howtodoinjava.com/" title="howtodoinjava" target="_blank">howtodoinjava</a><ul></ul><a href="http://docs.oracle.com/javase/9/docs/api/" title="javadoc(8/9)" target="_blank">javadoc(8/9)</a><ul></ul><a href="https://docs.oracle.com/javase/tutorial/essential/io/" title="java-core/io" target="_blank">java-core/io</a><ul></ul><a href="https://github.com/eugenp/tutorials" title="eugenp/tutorials" target="_blank">eugenp/tutorials</a><ul></ul><a href="http://www.markdown.cn/" title="markdown参考" target="_blank">markdown参考</a><ul></ul><a href="https://www.baeldung.com/" title="spring教程baeldung" target="_blank">spring教程baeldung</a><ul></ul><a href="https://createchance.github.io/" title="java并发编程" target="_blank">java并发编程</a><ul></ul><a href="http://ifeve.com/" title="并发编程" target="_blank">并发编程</a><ul></ul><a href="http://tutorials.jenkov.com/java-io/index.html" title="Java IO Tutorial" target="_blank">Java IO Tutorial</a><ul></ul><a href="http://tutorials.jenkov.com/java-nio/index.html" title="Java NIO Tutorial" target="_blank">Java NIO Tutorial</a><ul></ul><a href="https://tonybai.com/articles/" title="tonybai-golang" target="_blank">tonybai-golang</a></div></div></div></div><a id="totop" href="#top"></a><div id="footer"><div class="footer-info"><p><a href="/baidusitemap.xml">Baidu Site Haritası</a> |  <a href="/atom.xml">订阅</a> |  <a href="/about/">关于</a></p><p>本站总访问量：<i id="busuanzi_container_site_pv"><i id="busuanzi_value_site_pv"></i></i>次</p><p><span> Copyright &copy;<a href="/." rel="nofollow">xinxiamu.</a></span><span> Theme by<a rel="nofollow" target="_blank" href="https://github.com/chaooo/hexo-theme-BlueLake"> BlueLake.</a></span><span> Count by<a href="http://busuanzi.ibruce.info/"> busuanzi.</a></span><span> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a></span></p></div></div></div><script src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script type="text/javascript" src="/js/search.json.js?v=2.0.1"></script><script type="text/javascript" src="/js/toctotop.js?v=2.0.1" async></script><script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":["mshare","weixin","tsina","qzone","linkedin","fbook","twi","print","renren","sqq","evernotecn","bdysc","tqq","tqf","bdxc","kaixin001","tieba","douban","bdhome","thx","ibaidu","meilishuo","mogujie","diandian","huaban","duitang","hx","fx","youdao","sdo","qingbiji","people","xinhua","mail","isohu","yaolan","wealink","ty","iguba","h163","copy"],"bdPic":"","bdStyle":"1","bdSize":"16"},"share":{},"image":{"viewList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","qzone","weixin","fbook","twi","linkedin","youdao","evernotecn","mshare"]}};with(document)0[(getElementsByTagName('head')[0]||head).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+</script></body></html>
